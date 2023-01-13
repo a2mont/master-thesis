@@ -65,3 +65,75 @@ simulation to test its capabilities and resistance to challenging scenarios or s
 |<ul><li>- [ ] Allow modifications of material space mesh to loosen restrictions ?|
 |<ul><li>- [ ] **3D implementation and evaluation** </li></ul>| |
 |Similar to 2D| 3-4 months|
+
+
+<style>
+    th{
+        border-bottom:1px
+    }
+    .main-title{
+        font-weight: bold;
+    }
+    .scd-title{
+        font-style: italic 
+    }
+    .content{
+
+    }
+</style>
+
+<table>
+<tr>
+<th>Task</th>
+<th>Duration</th>
+<th>Completed</th>
+</tr>
+<tr>
+<td>2D implementation and evaluation</td>
+<td></td>
+</tr>
+<tr>
+<td>Setup</td>
+<td>1 week</td>
+</tr>
+<tr>
+<td>OpenFlipper plugin setup</td>
+<td></td>
+</tr>
+<tr>
+<td>OpenFlipper interface</td>
+<td></td>
+</tr>
+<tr>
+<td>2D Implementation</td>
+<td>1 month</td>
+</tr>
+<tr>
+<td>2D version of operations design</td>
+<td></td>
+</tr>
+<tr>
+<td>2D version of operations implementation</td>
+<td></td>
+</tr>
+<tr>
+<td>Evaluation of quality with high deformations</td>
+<td></td>
+</tr>
+<tr>
+<td>Evaluation of consequences for material space without any restriction</td>
+<td></td>
+</tr>
+<tr>
+<td>Going further</td>
+<td>1-2 months</td>
+</tr>
+<tr>
+<td>3D implementation and evaluation</td>
+<td></td>
+</tr>
+<tr>
+<td>Similar to 2D</td>
+<td>3-4 months</td>
+</tr>
+</table>

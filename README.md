@@ -70,7 +70,7 @@ simulation to test its capabilities and resistance to challenging scenarios or s
 </tr>
 <tr>
 <td>2D implementation and evaluation</td>
-<td></td>
+<td><input type="checkbox" id="scales" name="scales" checked></td>
 </tr>
 <tr>
 <td>Setup</td>

@@ -60,5 +60,8 @@ simulation to test its capabilities and resistance to challenging scenarios or s
 |<ul><li>- [ ] Evaluation of quality with high deformations </li></ul>| |
 |<ul><li>- [ ] Evaluation of consequences for material space without any restriction</li></ul> | |
 |<ul><li>- [ ] *Going further* </li></ul>| 1-2 months |
+|<ul><li>- [ ] Implementation of restriction criteria based on material space|
+|<ul><li>- [ ] Re-evaluation of quality of world space mesh with restrictions|
+|<ul><li>- [ ] Allow modifications of material space mesh to loosen restrictions ?|
 |<ul><li>- [ ] **3D implementation and evaluation** </li></ul>| |
 |Similar to 2D| 3-4 months|

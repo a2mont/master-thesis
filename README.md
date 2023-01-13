@@ -47,73 +47,20 @@ simulation to test its capabilities and resistance to challenging scenarios or s
 
 ## Plan
 
-<style>
-    th{
-        border-bottom:1px
-    }
-    .main-title{
-        font-weight: bold;
-    }
-    .scd-title{
-        font-style: italic 
-    }
-    .content{
-
-    }
-</style>
-
-<table>
-<tr>
-<th>Task</th>
-<th>Duration</th>
-<th>Completed</th>
-</tr>
-<tr>
-<td>2D implementation and evaluation</td>
-<td><input type="checkbox" id="scales" name="scales" checked></td>
-</tr>
-<tr>
-<td>Setup</td>
-<td>1 week</td>
-</tr>
-<tr>
-<td>OpenFlipper plugin setup</td>
-<td></td>
-</tr>
-<tr>
-<td>OpenFlipper interface</td>
-<td></td>
-</tr>
-<tr>
-<td>2D Implementation</td>
-<td>1 month</td>
-</tr>
-<tr>
-<td>2D version of operations design</td>
-<td></td>
-</tr>
-<tr>
-<td>2D version of operations implementation</td>
-<td></td>
-</tr>
-<tr>
-<td>Evaluation of quality with high deformations</td>
-<td></td>
-</tr>
-<tr>
-<td>Evaluation of consequences for material space without any restriction</td>
-<td></td>
-</tr>
-<tr>
-<td>Going further</td>
-<td>1-2 months</td>
-</tr>
-<tr>
-<td>3D implementation and evaluation</td>
-<td></td>
-</tr>
-<tr>
-<td>Similar to 2D</td>
-<td>3-4 months</td>
-</tr>
-</table>
+| Task | Duration |
+| :--- | :---: |
+|<ul><li>- [ ] **2D implementation and evaluation** </li></ul>| |
+|<ul><li>- [x] *Setup* </li></ul>| 1 week |
+|<ul><li>- [x] OpenFlipper plugin setup </li></ul>|  |
+|<ul><li>- [x] OpenFlipper interface </li></ul>| |
+|<ul><li>- [ ] *2D implementation* </li></ul>| 1 month |
+|<ul><li>- [ ] 2D version of operations design </li></ul>| |
+|<ul><li>- [ ] 2D version of operations implementation </li></ul>| |
+|<ul><li>- [ ] Evaluation of quality with high deformations </li></ul>| |
+|<ul><li>- [ ] Evaluation of consequences for material space without any restriction</li></ul> | |
+|<ul><li>- [ ] *Going further* </li></ul>| 1-2 months |
+|<ul><li>- [ ] Implementation of restriction criteria based on material space|
+|<ul><li>- [ ] Re-evaluation of quality of world space mesh with restrictions|
+|<ul><li>- [ ] Allow modifications of material space mesh to loosen restrictions ?|
+|<ul><li>- [ ] **3D implementation and evaluation** </li></ul>| |
+|Similar to 2D| 3-4 months|

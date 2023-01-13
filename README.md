@@ -48,18 +48,17 @@ simulation to test its capabilities and resistance to challenging scenarios or s
 ## Plan
 
 
-
 | Task | Duration |
 | :--- | :---: |
-| [] **2D implementation and evaluation** | |
-| [x] *Setup* | 1 week |
-| [x] OpenFlipper plugin setup |  |
-| [x] OpenFlipper interface | |
-| [] *2D implementation* | 1 month |
-| [] 2D version of operations design | |
-| [] 2D version of operations implementation | |
-| [] Evaluation of quality with high deformations | |
-| [] Evaluation of consequences for material space without any restriction | |
-| [] *Going further* | 1-2 months |
-| [] **3D implementation and evaluation** | |
-| Similar to 2D | 3-4 months|
+|<ul><li>- [] **2D implementation and evaluation** </li></ul>| |
+|<ul><li>- [x] *Setup* </li></ul>| 1 week |
+|<ul><li>- [x] OpenFlipper plugin setup </li></ul>|  |
+|<ul><li>- [x] OpenFlipper interface </li></ul>| |
+|<ul><li>- [] *2D implementation* </li></ul>| 1 month |
+|<ul><li>- [] 2D version of operations design </li></ul>| |
+|<ul><li>- [] 2D version of operations implementation </li></ul>| |
+|<ul><li>- [] Evaluation of quality with high deformations </li></ul>| |
+|<ul><li>- [] Evaluation of consequences for material space without any restriction</li></ul> | |
+|<ul><li>- [] *Going further* </li></ul>| 1-2 months |
+|<ul><li>- [] **3D implementation and evaluation** </li></ul>| |
+|<ul><li>- Similar to 2D </li></ul>| 3-4 months|

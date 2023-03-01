@@ -16,7 +16,7 @@ void MasterPlugin::initializePlugin()
     iterationsSpinbox_->setMaximum(1000);
     iterationsSpinbox_->setSingleStep(1);
     QLabel* label = new QLabel("Iterations:");
-    // TEST
+    
 
     QGridLayout* layout = new QGridLayout(toolBox);
     layout->addWidget(label, 0, 0);

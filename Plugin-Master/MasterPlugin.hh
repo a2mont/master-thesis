@@ -16,12 +16,14 @@
 #include <ObjectTypes/TriangleMesh/TriangleMesh.hh>
 
 #include "MasterToolbar.hh"
-class MasterPlugin : public QObject, BaseInterface, ToolboxInterface, LoggingInterface
+class MasterPlugin : public QObject, BaseInterface, ToolboxInterface, LoggingInterface, MouseInterface, PickingInterface
 {
 Q_OBJECT
     Q_INTERFACES(BaseInterface)
     Q_INTERFACES(ToolboxInterface)
     Q_INTERFACES(LoggingInterface)
+    Q_INTERFACES(MouseInterface)
+    Q_INTERFACES(PickingInterface)
 
 #if QT_VERSION >= 0x050000
     Q_PLUGIN_METADATA(IID "org.OpenFlipper.Plugins.Plugin-Master")
@@ -37,13 +39,20 @@ signals:
 
     // ToolboxInterface
     void addToolbox(QString _name, QWidget* _widget);
+    //PickingInterface
+    void addPickMode(const std::string& _mode);
+    void addHiddenPickMode(const std::string& _mode);
 
 
 private slots:
     // initialization functions
     void initializePlugin();
+    void pluginInitialized();
 
-    void simpleLaplace();
+    void slotMouseEvent(QMouseEvent* _event) ;
+    void slot_show_constraint_vertex();
+    void slot_select_vertex();
+    void slot_test();
 
 
 public :
@@ -56,6 +65,19 @@ public :
   
 
 private:
+    // The toolbox widget and the button in it
+    QWidget* tool_;
+    QPushButton* pickButton_;
+
     QSpinBox* iterationsSpinbox_;
+    ACG::HaltonColors hcolors_;
+
+    //store selected vertex
+    int constraint_vhs_;
+
+    //store fixed faces
+    std::vector<int> fixed_vhs_;
+    //store moved faces
+    std::vector<int> displaced_vhs_;
 };
 #endif

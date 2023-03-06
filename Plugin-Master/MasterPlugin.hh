@@ -51,8 +51,7 @@ private slots:
 
     void slotMouseEvent(QMouseEvent* _event) ;
     void slot_show_constraint_vertex();
-    void slot_select_vertex();
-    void slot_test();
+    void slot_displace_constraint_vertex();
 
 
 public :
@@ -68,6 +67,10 @@ private:
     // The toolbox widget and the button in it
     QWidget* tool_;
     QPushButton* pickButton_;
+    QPushButton* displaceButton_;
+    QSpinBox* xValue_;
+    QSpinBox* yValue_;
+    QSpinBox* zValue_;
 
     QSpinBox* iterationsSpinbox_;
     ACG::HaltonColors hcolors_;
@@ -75,9 +78,7 @@ private:
     //store selected vertex
     int constraint_vhs_;
 
-    //store fixed faces
-    std::vector<int> fixed_vhs_;
-    //store moved faces
-    std::vector<int> displaced_vhs_;
+
+//    TriMesh& mesh_;
 };
 #endif

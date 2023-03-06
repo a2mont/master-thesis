@@ -14,17 +14,39 @@ void MasterPlugin::initializePlugin()
 
     // Create button that can be toggled
     // to (de)activate plugin's picking mode
-    pickButton_ = new QPushButton(tr("Select object"));
+    pickButton_ = new QPushButton(tr("Select vertex"));
     pickButton_->setCheckable(true);
-    QLabel* label = new QLabel("Pick constraint vertex");
+    QLabel* labelVertex = new QLabel("Pick constraint vertex");
+
+
+    QLabel* labelDisplacement = new QLabel("Displacement values for constrained vertex");
+    xValue_ = new QSpinBox();
+    xValue_->setPrefix(tr("x: "));
+    xValue_->setValue(5.0);
+    yValue_ = new QSpinBox();
+    yValue_->setPrefix(tr("y: "));
+    yValue_->setValue(5.0);
+    zValue_ = new QSpinBox();
+    zValue_->setPrefix(tr("z: "));
+    zValue_->setValue(0.0);
+
+    displaceButton_ = new QPushButton(tr("Displace vertex"));
 
     QGridLayout* grid = new QGridLayout();
-    grid->addWidget(label, 0, 0);
+    grid->addWidget(labelVertex, 0, 0);
     grid->addWidget(pickButton_, 1, 0);
+    grid->addWidget(labelDisplacement, 2,0);
+    grid->addWidget(xValue_, 3,0);
+    grid->addWidget(yValue_, 3,1);
+    grid->addWidget(zValue_, 3,2);
+    grid->addWidget(displaceButton_, 4,0);
     tool_->setLayout(grid);
 
     // Connect button to slotButtonClicked()
     connect(pickButton_, SIGNAL(clicked()), this, SLOT(slot_show_constraint_vertex()));
+    connect(displaceButton_,  SIGNAL(clicked()), this, SLOT(slot_displace_constraint_vertex()));
+
+
     // Add the Toolbox
     emit addToolbox(tr("Master"), tool_);
 }
@@ -61,7 +83,7 @@ void MasterPlugin::slotMouseEvent(QMouseEvent* _event) {
                         auto vh = tri_obj->mesh()->vertex_handle(target_idx);
                         if (vh == TriMesh::InvalidVertexHandle)
                             return;
-                        //set constraint vertices
+                        //set constraint vertices (for #selected vertices >1)
 //                        for(int i=0; i<2; ++i)
 //                            if(tool_->vertex_number_cb->currentIndex() == i)
                         constraint_vhs_ = vh.idx();
@@ -114,6 +136,14 @@ void MasterPlugin::slot_show_constraint_vertex(){
     }
 }
 
+void MasterPlugin::slot_displace_constraint_vertex(){
+    std::cout << xValue_->value() << "text" << std::endl;
+//    for(auto vh : mesh_.vertices()){
+//        if(vh.idx() == constraint_vhs_){
+
+//        }
+//    }
+}
 
 #if QT_VERSION < 0x050000
 Q_EXPORT_PLUGIN2(masterplugin, MasterPlugin);

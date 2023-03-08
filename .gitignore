@@ -1,3 +1,8 @@
+# Folders
 OpenFlipper-Free/
+Documentation/Codes/Stellar-1.1/*
+.vscode
+
+# Files
 notes.md
 *.sh

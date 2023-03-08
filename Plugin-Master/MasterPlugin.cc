@@ -58,6 +58,7 @@ void MasterPlugin::initializePlugin()
 }
 
 void MasterPlugin::pluginInitialized(){
+    constraint_vh_ = 0;
     emit addPickMode("Pick Constraint");
 
 
@@ -92,7 +93,7 @@ void MasterPlugin::slotMouseEvent(QMouseEvent* _event) {
                         //set constraint vertices (for #selected vertices >1)
 //                        for(int i=0; i<2; ++i)
 //                            if(tool_->vertex_number_cb->currentIndex() == i)
-                        constraint_vhs_ = vh.idx();
+                        constraint_vh_ = vh.idx();
 
                         slot_show_constraint_vertex();
 
@@ -127,14 +128,16 @@ void MasterPlugin::slot_show_constraint_vertex(){
         tri_obj->materialNode()->set_point_size(12);
 
         for(auto vh : trimesh->vertices()) {
-            if(constraint_vhs_ == vh.idx())
+            if(constraint_vh_ == vh.idx())
                 trimesh->set_color(vh, ACG::Vec4f(1,0,0,1));
             else
                 trimesh->set_color(vh, ACG::Vec4f(1,1,1,0));
         }
 
-        tri_obj->meshNode()->drawMode(ACG::SceneGraph::DrawModes::WIREFRAME
-        | ACG::SceneGraph::DrawModes::SOLID_SMOOTH_SHADED | ACG::SceneGraph::DrawModes::POINTS_COLORED);
+        tri_obj->meshNode()->drawMode(
+                    ACG::SceneGraph::DrawModes::WIREFRAME
+                  | ACG::SceneGraph::DrawModes::SOLID_SMOOTH_SHADED
+                  | ACG::SceneGraph::DrawModes::POINTS_COLORED);
 
         tri_obj->materialNode()->enable_alpha_test(0.8);
 
@@ -144,20 +147,14 @@ void MasterPlugin::slot_show_constraint_vertex(){
 
 void MasterPlugin::slot_displace_constraint_vertex(){
     ACG::Vec3d displacement(xValue_->value(), yValue_->value(), zValue_->value());
-    std::cout << "Displacement: " << displacement << std::endl;
     for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
          o_it != PluginFunctions::objectsEnd(); ++o_it) {
-        auto tri_obj = PluginFunctions::triMeshObject(*o_it);
-        auto trimesh = tri_obj->mesh();
+        auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
+        auto *trimesh = tri_obj->mesh();
+        VertexDisplacement vd(*trimesh);
 
-        for(auto vh: trimesh->vertices()){
-            if (vh.idx() == constraint_vhs_) {
-                std::cout << "Constraint vertex id: " << vh.idx() << std::endl;
-                auto pt = trimesh->point(vh);
-                pt += displacement;
-                trimesh->point(vh) = pt;
-            }
-        }
+        vd.displace(displacement, constraint_vh_);
+
         emit updatedObject(tri_obj->id(), UPDATE_ALL);
     }
 }

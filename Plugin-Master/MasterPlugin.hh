@@ -15,6 +15,8 @@
 
 #include <ObjectTypes/TriangleMesh/TriangleMesh.hh>
 
+#include "VertexDisplacement.hh"
+
 #include "MasterToolbar.hh"
 class MasterPlugin : public QObject, BaseInterface, ToolboxInterface, LoggingInterface, MouseInterface, PickingInterface
 {
@@ -76,7 +78,7 @@ private:
     ACG::HaltonColors hcolors_;
 
     //store selected vertex
-    int constraint_vhs_;
+    int constraint_vh_;
 
 
 //    TriMesh& mesh_;

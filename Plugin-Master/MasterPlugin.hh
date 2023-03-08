@@ -68,9 +68,9 @@ private:
     QWidget* tool_;
     QPushButton* pickButton_;
     QPushButton* displaceButton_;
-    QSpinBox* xValue_;
-    QSpinBox* yValue_;
-    QSpinBox* zValue_;
+    QDoubleSpinBox* xValue_;
+    QDoubleSpinBox* yValue_;
+    QDoubleSpinBox* zValue_;
 
     QSpinBox* iterationsSpinbox_;
     ACG::HaltonColors hcolors_;

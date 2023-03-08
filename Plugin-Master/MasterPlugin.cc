@@ -20,15 +20,21 @@ void MasterPlugin::initializePlugin()
 
 
     QLabel* labelDisplacement = new QLabel("Displacement values for constrained vertex");
-    xValue_ = new QSpinBox();
+    xValue_ = new QDoubleSpinBox();
     xValue_->setPrefix(tr("x: "));
-    xValue_->setValue(5.0);
-    yValue_ = new QSpinBox();
+    xValue_->setSingleStep(0.1);
+    xValue_->setRange(-5.0, 5.0);
+    xValue_->setValue(1.0);
+    yValue_ = new QDoubleSpinBox();
     yValue_->setPrefix(tr("y: "));
-    yValue_->setValue(5.0);
-    zValue_ = new QSpinBox();
+    yValue_->setValue(1.0);
+    yValue_->setSingleStep(0.1);
+    yValue_->setRange(-5.0, 5.0);
+    zValue_ = new QDoubleSpinBox();
     zValue_->setPrefix(tr("z: "));
     zValue_->setValue(0.0);
+    zValue_->setSingleStep(0.1);
+    zValue_->setRange(-5.0, 5.0);
 
     displaceButton_ = new QPushButton(tr("Displace vertex"));
 
@@ -137,12 +143,23 @@ void MasterPlugin::slot_show_constraint_vertex(){
 }
 
 void MasterPlugin::slot_displace_constraint_vertex(){
-    std::cout << xValue_->value() << "text" << std::endl;
-//    for(auto vh : mesh_.vertices()){
-//        if(vh.idx() == constraint_vhs_){
+    ACG::Vec3d displacement(xValue_->value(), yValue_->value(), zValue_->value());
+    std::cout << "Displacement: " << displacement << std::endl;
+    for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
+         o_it != PluginFunctions::objectsEnd(); ++o_it) {
+        auto tri_obj = PluginFunctions::triMeshObject(*o_it);
+        auto trimesh = tri_obj->mesh();
 
-//        }
-//    }
+        for(auto vh: trimesh->vertices()){
+            if (vh.idx() == constraint_vhs_) {
+                std::cout << "Constraint vertex id: " << vh.idx() << std::endl;
+                auto pt = trimesh->point(vh);
+                pt += displacement;
+                trimesh->point(vh) = pt;
+            }
+        }
+        emit updatedObject(tri_obj->id(), UPDATE_ALL);
+    }
 }
 
 #if QT_VERSION < 0x050000

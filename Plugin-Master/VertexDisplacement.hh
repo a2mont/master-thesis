@@ -8,9 +8,9 @@ public:
     VertexDisplacement(TriMesh& _mesh): mesh_(_mesh){}
     ~VertexDisplacement(){}
 public:
-    void displace(const ACG::Vec3d _displacement, const int _constraint_vh);
+    void displace(const ACG::Vec3d _displacement, const int _constraint_vh, const bool _verbose = false);
 private:
     TriMesh& mesh_;
 
 };
-#endif // VERTEXDISPLACEMENT_HH
+#endif // OPENFLIPPER_VERTEXDISPLACEMENT_HH

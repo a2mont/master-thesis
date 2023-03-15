@@ -15,9 +15,9 @@
 
 #include <ObjectTypes/TriangleMesh/TriangleMesh.hh>
 
-#include "VertexDisplacement.hh"
-
+#include "MainLoop.hh"
 #include "MasterToolbar.hh"
+
 class MasterPlugin : public QObject, BaseInterface, ToolboxInterface, LoggingInterface, MouseInterface, PickingInterface
 {
 Q_OBJECT
@@ -80,7 +80,5 @@ private:
     //store selected vertex
     int constraint_vh_;
 
-
-//    TriMesh& mesh_;
 };
 #endif

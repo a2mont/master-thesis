@@ -22,19 +22,19 @@ void MasterPlugin::initializePlugin()
     QLabel* labelDisplacement = new QLabel("Displacement values for constrained vertex");
     xValue_ = new QDoubleSpinBox();
     xValue_->setPrefix(tr("x: "));
-    xValue_->setSingleStep(0.1);
-    xValue_->setRange(-5.0, 5.0);
-    xValue_->setValue(1.0);
+    xValue_->setSingleStep(0.01);
+    xValue_->setRange(-1.0, 1.0);
+    xValue_->setValue(.05);
     yValue_ = new QDoubleSpinBox();
     yValue_->setPrefix(tr("y: "));
-    yValue_->setValue(1.0);
-    yValue_->setSingleStep(0.1);
-    yValue_->setRange(-5.0, 5.0);
+    yValue_->setValue(.05);
+    yValue_->setSingleStep(0.01);
+    yValue_->setRange(-1.0, 1.0);
     zValue_ = new QDoubleSpinBox();
     zValue_->setPrefix(tr("z: "));
     zValue_->setValue(0.0);
-    zValue_->setSingleStep(0.1);
-    zValue_->setRange(-5.0, 5.0);
+    zValue_->setSingleStep(0.01);
+    zValue_->setRange(-1.0, 1.0);
 
     displaceButton_ = new QPushButton(tr("Displace vertex"));
 
@@ -151,9 +151,9 @@ void MasterPlugin::slot_displace_constraint_vertex(){
          o_it != PluginFunctions::objectsEnd(); ++o_it) {
         auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
         auto *trimesh = tri_obj->mesh();
-        VertexDisplacement vd(*trimesh);
 
-        vd.displace(displacement, constraint_vh_);
+        MainLoop loop(*trimesh);
+        loop.loop(displacement, constraint_vh_, true);
 
         emit updatedObject(tri_obj->id(), UPDATE_ALL);
     }

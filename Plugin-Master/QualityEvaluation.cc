@@ -16,7 +16,7 @@ double QualityEvaluation::evaluate(const OpenMesh::SmartFaceHandle _face, const 
     l_harm = calculate_l_harm(edge_legnths);
     l_rms = calculate_l_rms(edge_legnths);
     if(!std::isnan(area) && !std::isnan(area) && !std::isnan(area))
-        quality = 6 * sqrt(2) * area * l_harm / pow(l_rms, 4);
+        quality = 3 * sqrt(2) * area * l_harm / pow(l_rms, 4);
 
     if(_verbose)
         std::cout <<

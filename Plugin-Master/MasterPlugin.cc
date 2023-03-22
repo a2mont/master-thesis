@@ -133,13 +133,14 @@ void MasterPlugin::slot_show_constraint_vertex(){
             else
                 trimesh->set_color(vh, ACG::Vec4f(1,1,1,0));
         }
-
+        trimesh->set_color(trimesh->face_handle(1), ACG::Vec4f(1,0,0,1));
         tri_obj->meshNode()->drawMode(
                     ACG::SceneGraph::DrawModes::WIREFRAME
-                  | ACG::SceneGraph::DrawModes::SOLID_SMOOTH_SHADED
-                  | ACG::SceneGraph::DrawModes::POINTS_COLORED);
+                  | ACG::SceneGraph::DrawModes::POINTS_COLORED
+                  | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED_FLAT_SHADED);
 
         tri_obj->materialNode()->enable_alpha_test(0.8);
+
 
         emit updatedObject(tri_obj->id(), UPDATE_COLOR);
     }
@@ -151,6 +152,13 @@ void MasterPlugin::slot_displace_constraint_vertex(){
          o_it != PluginFunctions::objectsEnd(); ++o_it) {
         auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
         auto *trimesh = tri_obj->mesh();
+
+        tri_obj->meshNode()->drawMode(
+                    ACG::SceneGraph::DrawModes::WIREFRAME
+                  | ACG::SceneGraph::DrawModes::POINTS_COLORED
+                  | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED_FLAT_SHADED);
+
+        tri_obj->materialNode()->enable_alpha_test(0.8);
 
         MainLoop loop(*trimesh);
         loop.loop(displacement, constraint_vh_, true);

@@ -28,7 +28,7 @@ public:
 
 public:
     double evaluate(const OpenMesh::SmartFaceHandle _face, const bool _verbose = false);
-    PriorityQueue get_face_quality_queue() const {return face_quality_queue_;}
+    PriorityQueue& get_face_quality_queue() {return face_quality_queue_;}
     void reset_queue();
 private:
     double calculate_area(std::vector<double> _edge_lengths);

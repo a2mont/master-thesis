@@ -96,8 +96,25 @@ void MainLoop::insertion_pass(QualityEvaluation::PriorityQueue* _A){
 
 void MainLoop::smoothing_pass(QualityEvaluation::PriorityQueue* _A){
     // V <- the vertices in A
+    std::vector<OpenMesh::SmartVertexHandle> V;
+    for (unsigned long i = 0; i < _A->size(); i++) {
+        QualityEvaluation::Triangle top = _A->top();
+        _A->pop();
+        auto fh = mesh_.face_handle(top.face_id_);
+        for(auto fv_it = mesh_.fv_iter(fh); fv_it.is_valid(); ++fv_it){
+            V.emplace_back(*fv_it);
+        }
+    }
+
+    for(auto v: V){
+        smoother_.smooth(v);
+        // A <- A U the triangles adjoining v in M
+        for(auto vf_it = mesh_.vf_cwiter(v); vf_it.is_valid(); ++vf_it){
+            double quality = qe_.evaluate(*vf_it);
+            _A->push(QualityEvaluation::Triangle(v.idx(),quality));
+        }
+    }
     // foreach v in V
     // Smooth v
-    // A <- A U the triangle adjoining v in M
     //std::cout << "Smoothing pass" << std::endl;
 }

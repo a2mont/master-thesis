@@ -27,15 +27,14 @@ public:
     using PriorityQueue = std::priority_queue<Triangle, std::vector<Triangle>, CompareQuality>;
 
 public:
-    double evaluate(const OpenMesh::SmartFaceHandle _face, const bool _verbose = false);
     PriorityQueue& get_face_quality_queue() {return face_quality_queue_;}
+    double evaluate(const OpenMesh::SmartFaceHandle _face, const bool _verbose = false);
     void reset_queue();
 private:
     double calculate_area(std::vector<double> _edge_lengths);
     double calculate_l_harm(std::vector<double> _edge_lengths);
     double calculate_l_rms(std::vector<double> _edge_lengths);
 
-private:
 private:
     TriMesh& mesh_;
     std::priority_queue<Triangle, std::vector<Triangle>, CompareQuality> face_quality_queue_;

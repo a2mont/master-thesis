@@ -9,11 +9,13 @@
 void MasterPlugin::initializePlugin()
 {  
     tool_ = new QWidget();
-    QSize size(300, 300);
+    QSize size(600, 300);
     tool_->resize(size);
 
     // Create button that can be toggled
     // to (de)activate plugin's picking mode
+    auto generateButton = new QPushButton(tr("Generate Mesh"));
+
     pickButton_ = new QPushButton(tr("Select vertex"));
     pickButton_->setCheckable(true);
     QLabel* labelVertex = new QLabel("Pick constraint vertex");
@@ -39,18 +41,22 @@ void MasterPlugin::initializePlugin()
     displaceButton_ = new QPushButton(tr("Displace vertex"));
 
     QGridLayout* grid = new QGridLayout();
-    grid->addWidget(labelVertex, 0, 0);
-    grid->addWidget(pickButton_, 1, 0);
-    grid->addWidget(labelDisplacement, 2,0);
-    grid->addWidget(xValue_, 3,0);
-    grid->addWidget(yValue_, 3,1);
-    grid->addWidget(zValue_, 3,2);
-    grid->addWidget(displaceButton_, 4,0);
+    grid->addWidget(generateButton, 0,0);
+    grid->addWidget(labelVertex, 1, 0);
+    grid->addWidget(pickButton_, 2, 0);
+    grid->addWidget(labelDisplacement, 3,0);
+    grid->addWidget(xValue_, 4,0);
+    grid->addWidget(yValue_, 4,1);
+    grid->addWidget(zValue_, 4,2);
+    grid->addWidget(displaceButton_, 5,0);
     tool_->setLayout(grid);
 
     // Connect button to slotButtonClicked()
+    connect(generateButton, SIGNAL(clicked()), this, SLOT(slot_generate_base_mesh()));
     connect(pickButton_, SIGNAL(clicked()), this, SLOT(slot_show_constraint_vertex()));
     connect(displaceButton_,  SIGNAL(clicked()), this, SLOT(slot_displace_constraint_vertex()));
+
+    constraint_vh_ = 25;
 
 
     // Add the Toolbox
@@ -58,7 +64,6 @@ void MasterPlugin::initializePlugin()
 }
 
 void MasterPlugin::pluginInitialized(){
-    constraint_vh_ = 0;
     emit addPickMode("Pick Constraint");
 
 
@@ -133,11 +138,11 @@ void MasterPlugin::slot_show_constraint_vertex(){
             else
                 trimesh->set_color(vh, ACG::Vec4f(1,1,1,0));
         }
-        trimesh->set_color(trimesh->face_handle(1), ACG::Vec4f(1,0,0,1));
+
         tri_obj->meshNode()->drawMode(
                     ACG::SceneGraph::DrawModes::WIREFRAME
                   | ACG::SceneGraph::DrawModes::POINTS_COLORED
-                  | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED_FLAT_SHADED);
+                  | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED_SMOOTH_SHADED);
 
         tri_obj->materialNode()->enable_alpha_test(0.8);
 
@@ -153,19 +158,66 @@ void MasterPlugin::slot_displace_constraint_vertex(){
         auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
         auto *trimesh = tri_obj->mesh();
 
+        for(auto fh: trimesh->faces()){
+            trimesh->set_color(fh, ACG::Vec4f(1,1,1,1));
+        }
         tri_obj->meshNode()->drawMode(
                     ACG::SceneGraph::DrawModes::WIREFRAME
                   | ACG::SceneGraph::DrawModes::POINTS_COLORED
-                  | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED_FLAT_SHADED);
+                  | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED);
 
         tri_obj->materialNode()->enable_alpha_test(0.8);
 
-        MainLoop loop(*trimesh);
-        loop.loop(displacement, constraint_vh_, true);
+        MainLoop loop(*trimesh, q_min_);
+        loop.loop(displacement, constraint_vh_, false);
+        std::cout << "Loop ended" << std::endl;
+        trimesh->garbage_collection();
+        Highlight::highlight_worst_triangles(*trimesh, q_min_);
 
         emit updatedObject(tri_obj->id(), UPDATE_ALL);
     }
 }
+
+void MasterPlugin::slot_generate_base_mesh(){
+    int mesh_obj_id;
+    emit addEmptyObject(DATA_TRIANGLE_MESH, mesh_obj_id);
+    std::cout << "text" << std::endl;
+    auto *mesh_obj = PluginFunctions::triMeshObject(mesh_obj_id);
+    std::cout << "text2" << std::endl;
+    mesh_obj->setName("Mesh");
+    mesh_obj->materialNode()->set_point_size(6.0);
+    auto *mesh = mesh_obj->mesh();
+    // Create vertices
+    CustomMesh::VertexHandle vhandle[100];
+    int count = 0;
+    for (int i = 0; i < 10; ++i) {
+       for (int j = 0; j < 10; ++j) {
+           ACG::Vec3d p(i, j, 0);
+           vhandle[count] = mesh->add_vertex(p);
+           ++count;
+       }
+    }
+
+    // Create faces
+    for (int i = 0; i < 9; ++i) {
+       for (int j = 0; j < 9; ++j) {
+           // First triangle
+           CustomMesh::FaceHandle fh1 = mesh->add_face(vhandle[i*10+j], vhandle[i*10+j+1], vhandle[(i+1)*10+j+1]);
+           // Second triangle
+           CustomMesh::FaceHandle fh2 = mesh->add_face(vhandle[(i+1)*10+j+1], vhandle[(i+1)*10+j], vhandle[i*10+j]);
+       }
+    }
+
+    mesh_obj->meshNode()->drawMode(
+                ACG::SceneGraph::DrawModes::WIREFRAME
+              | ACG::SceneGraph::DrawModes::POINTS_COLORED
+              | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED_FLAT_SHADED);
+
+    mesh_obj->materialNode()->enable_alpha_test(0.8);
+    emit updatedObject(mesh_obj->id(), UPDATE_ALL);
+
+}
+
 
 #if QT_VERSION < 0x050000
 Q_EXPORT_PLUGIN2(masterplugin, MasterPlugin);

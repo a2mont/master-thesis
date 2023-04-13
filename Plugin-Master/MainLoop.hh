@@ -11,11 +11,12 @@ class MainLoop
 {
 
 public:
-    MainLoop(TriMesh &_mesh) :
+    MainLoop(TriMesh& _mesh, double _q_min) :
         mesh_(_mesh),
         vd_(_mesh),
         qe_(_mesh),
-        smoother_(_mesh){}
+        smoother_(_mesh),
+        q_min_(_q_min){}
     ~MainLoop(){}
 
 
@@ -37,7 +38,8 @@ private:
     QualityEvaluation qe_;
     Smoothing smoother_;
 
-    const double q_min = 0.25;
+
+    const double q_min_;
 };
 
 #endif // OPENFLIPPER_MAINLOOP_HH

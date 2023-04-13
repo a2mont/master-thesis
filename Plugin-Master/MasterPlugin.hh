@@ -17,13 +17,15 @@
 
 #include "MainLoop.hh"
 #include "MasterToolbar.hh"
+#include "Highlight.hh"
 
-class MasterPlugin : public QObject, BaseInterface, ToolboxInterface, LoggingInterface, MouseInterface, PickingInterface
+class MasterPlugin : public QObject, BaseInterface, ToolboxInterface, LoggingInterface, LoadSaveInterface, MouseInterface, PickingInterface
 {
 Q_OBJECT
     Q_INTERFACES(BaseInterface)
     Q_INTERFACES(ToolboxInterface)
     Q_INTERFACES(LoggingInterface)
+    Q_INTERFACES(LoadSaveInterface)
     Q_INTERFACES(MouseInterface)
     Q_INTERFACES(PickingInterface)
 
@@ -32,12 +34,15 @@ Q_OBJECT
 #endif
 signals:
     void updateView();
-    void updatedObject(int _identifier, const UpdateType& _type);
 
 
     //LoggingInterface
     void log(Logtype _type, QString _message);
     void log(QString _message);
+
+    // LoadSaveInterface
+    void addEmptyObject(DataType _type, int& _id);
+    void updatedObject(int _identifier, const UpdateType& _type);
 
     // ToolboxInterface
     void addToolbox(QString _name, QWidget* _widget);
@@ -54,6 +59,7 @@ private slots:
     void slotMouseEvent(QMouseEvent* _event) ;
     void slot_show_constraint_vertex();
     void slot_displace_constraint_vertex();
+    void slot_generate_base_mesh();
 
 
 public :
@@ -66,6 +72,7 @@ public :
   
 
 private:
+    typedef OpenMesh::TriMesh_ArrayKernelT<> CustomMesh;
     // The toolbox widget and the button in it
     QWidget* tool_;
     QPushButton* pickButton_;
@@ -79,6 +86,8 @@ private:
 
     //store selected vertex
     int constraint_vh_;
+
+    const double q_min_ = 0.25;
 
 };
 #endif

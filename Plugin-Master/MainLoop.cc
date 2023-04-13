@@ -1,8 +1,10 @@
 #include "MainLoop.hh"
 
+
+
 void MainLoop::loop(ACG::Vec3d _displacement, int _constraint_vh, bool _verbose,int _max_iter ){
 
-    for(int i=0; i < _max_iter; i++){
+    for(int i=0; i < _max_iter; ++i){
         QualityEvaluation::PriorityQueue worstTriangles;
         QualityEvaluation::Triangle worstTriangle(0,0);
 
@@ -13,18 +15,18 @@ void MainLoop::loop(ACG::Vec3d _displacement, int _constraint_vh, bool _verbose,
         }
 
         worstTriangle = qe_.get_face_quality_queue().top();
-        while(worstTriangle.quality_ < q_min){
+        while(worstTriangle.quality_ < q_min_){
             worstTriangles.push(worstTriangle);
             qe_.get_face_quality_queue().pop();
             worstTriangle = qe_.get_face_quality_queue().top();
         }
-
         if(worstTriangles.empty())
             std::cout << "All triangles are of good enough quality\nWorst triangle: " << worstTriangle.toString() << std::endl;
         else
             std::cout << worstTriangles.size() << " triangles of bad quality"
-                      << "\nWorst triangle: " << worstTriangles.top().toString()
+                      << "\nWorst triangle: " << worstTriangle.toString()
                       << std::endl;
+
         improve_mesh(worstTriangles);
 
         qe_.reset_queue();
@@ -38,7 +40,7 @@ void MainLoop::improve_mesh(QualityEvaluation::PriorityQueue _badTriangles){
     while (!_badTriangles.empty()) {
         auto t = _badTriangles.top();
         _badTriangles.pop();
-        // TODO check if t exists mesh_isdeleted)
+        // TODO check if t exists
         if(!mesh_.status(mesh_.face_handle(t.face_id_)).deleted())
             improve_triangle(t);
     }
@@ -48,46 +50,85 @@ void MainLoop::improve_triangle(QualityEvaluation::Triangle _t){
     // A <- t, a triangle from the mesh
     QualityEvaluation::PriorityQueue A;
     A.push(_t);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; ++i) {
         bool changed = false;
         do {
             // A <- topological_pass(A,M)
-            changed = topologial_pass(&A);
-            if(A.top().quality_ >= q_min)
+            //changed = topologial_pass(&A);
+            if(A.top().quality_ >= q_min_)
                 return;
         } while (changed);
 
         // A <- edge_contraction_pass(A,M)
         edge_contraction_pass(&A);
-        if(A.top().quality_ >= q_min)
+        if(A.top().quality_ >= q_min_)
             return;
 
         // A <- insertion_pass(A,M)
         insertion_pass(&A);
-        if(A.top().quality_ >= q_min)
+        if(A.top().quality_ >= q_min_)
             return;
 
         // smoothing_pass()
         smoothing_pass(&A);
-        if(A.top().quality_ >= q_min)
+        if(A.top().quality_ >= q_min_)
             return;
     }
 }
 
 bool MainLoop::topologial_pass(QualityEvaluation::PriorityQueue* _A){
     //flips,edge removal, multi-face removal operations
+    std::cout << "Topological pass" << std::endl;
     bool changed = false;
-    // std::cout << "Topological pass" << std::endl;
+    // for each tri in a
+    // for each edge in tri
+    //  attempt to remove e
+    for(unsigned long i=0; i < _A->size(); ++i){
+        auto top = _A->top();
+        _A->pop();
+        auto fh = mesh_.face_handle(top.face_id_);
+        for (auto fe_it = mesh_.fe_cwiter(fh); fe_it.is_valid(); ++fe_it) {
+            if(!mesh_.status(fh).deleted()){
+                mesh_.delete_edge(*fe_it);
+                changed = true;
+            }
+        }
+    }
+
     return changed;
 }
 void MainLoop::edge_contraction_pass(QualityEvaluation::PriorityQueue* _A){
+//    std::cout << "Edge contraction pass" << std::endl;
     // E <- edges of the triangles in A
-    // foreach e in E
-    // if e still exists attempt to contract e and smooth vertex created
+    std::vector<OpenMesh::SmartEdgeHandle> E;
+    for(unsigned long i=0; i < _A->size(); ++i){
+        auto top = _A->top();
+        _A->pop();
+        auto fh = mesh_.face_handle(top.face_id_);
+
+        for (auto fe_it = mesh_.fe_cwiter(fh); fe_it.is_valid(); ++fe_it) {
+                E.emplace_back(*fe_it);
+        }
+        // foreach e in E
+        // if e still exists attempt to contract e and smooth vertex created
+        for(auto e: E){
+            if(!mesh_.status(fh).deleted()){
+                if (mesh_.is_collapse_ok(e.h0())) {
+                    auto he = e.h0();
+                    mesh_.collapse(he);
+                    smoother_.smooth(he.to());
+                    break;
+                }
+            }
+        }
+        E.clear();
+    }
+
     // return surviving set in A and the triangles in M altered by the contractions
-    // std::cout << "Edge contraction pass" << std::endl;
 
 }
+
+
 
 void MainLoop::insertion_pass(QualityEvaluation::PriorityQueue* _A){
     // std::cout << "Insertion pass" << std::endl;
@@ -95,9 +136,10 @@ void MainLoop::insertion_pass(QualityEvaluation::PriorityQueue* _A){
 }
 
 void MainLoop::smoothing_pass(QualityEvaluation::PriorityQueue* _A){
+//    std::cout << "Smoothing pass" << std::endl;
     // V <- the vertices in A
     std::vector<OpenMesh::SmartVertexHandle> V;
-    for (unsigned long i = 0; i < _A->size(); i++) {
+    for (unsigned long i = 0; i < _A->size(); ++i) {
         QualityEvaluation::Triangle top = _A->top();
         _A->pop();
         auto fh = mesh_.face_handle(top.face_id_);
@@ -114,7 +156,4 @@ void MainLoop::smoothing_pass(QualityEvaluation::PriorityQueue* _A){
             _A->push(QualityEvaluation::Triangle(v.idx(),quality));
         }
     }
-    // foreach v in V
-    // Smooth v
-    //std::cout << "Smoothing pass" << std::endl;
 }

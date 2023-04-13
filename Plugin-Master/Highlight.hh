@@ -5,6 +5,7 @@
 #include <ObjectTypes/TriangleMesh/TriangleMesh.hh>
 
 #include "QualityEvaluation.hh"
+#include "MainLoop.hh"
 
 class Highlight
 {
@@ -12,8 +13,7 @@ public:
     Highlight();
 
 public :
-    static void highlight_worst_triangles(TriMesh& _mesh, double _treshold);
-
+    static void highlight_triangles(TriMesh& _mesh, const bool _verbose = false);
 };
 
 #endif // OPENFLIPPER_HIGHLIGHT_HH

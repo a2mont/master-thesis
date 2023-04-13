@@ -87,7 +87,7 @@ private:
     //store selected vertex
     int constraint_vh_;
 
-    const double q_min_ = 0.25;
+    const double q_min_ = 0.5;
 
 };
 #endif

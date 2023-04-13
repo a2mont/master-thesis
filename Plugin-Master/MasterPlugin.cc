@@ -142,7 +142,7 @@ void MasterPlugin::slot_show_constraint_vertex(){
         tri_obj->meshNode()->drawMode(
                     ACG::SceneGraph::DrawModes::WIREFRAME
                   | ACG::SceneGraph::DrawModes::POINTS_COLORED
-                  | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED_SMOOTH_SHADED);
+                  | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED);
 
         tri_obj->materialNode()->enable_alpha_test(0.8);
 
@@ -171,8 +171,7 @@ void MasterPlugin::slot_displace_constraint_vertex(){
         MainLoop loop(*trimesh, q_min_);
         loop.loop(displacement, constraint_vh_, false);
         std::cout << "Loop ended" << std::endl;
-        trimesh->garbage_collection();
-        Highlight::highlight_worst_triangles(*trimesh, q_min_);
+        Highlight::highlight_triangles(*trimesh);
 
         emit updatedObject(tri_obj->id(), UPDATE_ALL);
     }
@@ -181,37 +180,37 @@ void MasterPlugin::slot_displace_constraint_vertex(){
 void MasterPlugin::slot_generate_base_mesh(){
     int mesh_obj_id;
     emit addEmptyObject(DATA_TRIANGLE_MESH, mesh_obj_id);
-    std::cout << "text" << std::endl;
     auto *mesh_obj = PluginFunctions::triMeshObject(mesh_obj_id);
-    std::cout << "text2" << std::endl;
     mesh_obj->setName("Mesh");
     mesh_obj->materialNode()->set_point_size(6.0);
     auto *mesh = mesh_obj->mesh();
     // Create vertices
-    CustomMesh::VertexHandle vhandle[100];
+    CustomMesh::VertexHandle vhandle[121];
     int count = 0;
-    for (int i = 0; i < 10; ++i) {
-       for (int j = 0; j < 10; ++j) {
-           ACG::Vec3d p(i, j, 0);
+    for (int i = 0; i < 11; ++i) {
+       for (int j = 0; j < 11; ++j) {
+           ACG::Vec3d p(-1 + 0.2*i, -1 + 0.2*j, 0);
            vhandle[count] = mesh->add_vertex(p);
-           ++count;
+           mesh->set_color(vhandle[count++], ACG::Vec4f(1,1,1,0));
        }
     }
 
     // Create faces
-    for (int i = 0; i < 9; ++i) {
-       for (int j = 0; j < 9; ++j) {
+    for (int i = 0; i < 10; ++i) {
+       for (int j = 0; j < 10; ++j) {
            // First triangle
-           CustomMesh::FaceHandle fh1 = mesh->add_face(vhandle[i*10+j], vhandle[i*10+j+1], vhandle[(i+1)*10+j+1]);
+           CustomMesh::FaceHandle fh1 = mesh->add_face(vhandle[i*11+j], vhandle[i*11+j+1], vhandle[(i+1)*11+j+1]);
            // Second triangle
-           CustomMesh::FaceHandle fh2 = mesh->add_face(vhandle[(i+1)*10+j+1], vhandle[(i+1)*10+j], vhandle[i*10+j]);
+           CustomMesh::FaceHandle fh2 = mesh->add_face(vhandle[(i+1)*11+j+1], vhandle[(i+1)*11+j], vhandle[i*11+j]);
+           mesh->set_color(fh1, ACG::Vec4f(1,1,1,1));
+           mesh->set_color(fh2, ACG::Vec4f(1,1,1,1));
        }
     }
 
     mesh_obj->meshNode()->drawMode(
                 ACG::SceneGraph::DrawModes::WIREFRAME
               | ACG::SceneGraph::DrawModes::POINTS_COLORED
-              | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED_FLAT_SHADED);
+              | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED);
 
     mesh_obj->materialNode()->enable_alpha_test(0.8);
     emit updatedObject(mesh_obj->id(), UPDATE_ALL);

@@ -16,16 +16,15 @@ public:
         mesh_(_mesh),
         vd_(_mesh),
         smoother_(_mesh),
-        q_min_(_q_min){}
+        q_min_(_q_min){
+            if(!mesh_.get_property_handle(face_visited_, "face visited"))
+                mesh_.add_property(face_visited_, "face visited");
+            for(auto fh: mesh_.faces()){
+                mesh_.property(face_visited_, fh) = false;
+        }
+    }
     ~MainLoop(){
         mesh_.remove_property(face_visited_);
-        mesh_.property_stats(std::cout);
-        if(!mesh_.get_property_handle(face_visited_, "face visited"))
-            mesh_.add_property(face_visited_, "face visited");
-        mesh_.property_stats(std::cout);
-        for(auto fh: mesh_.faces()){
-            mesh_.property(face_visited_, fh) = false;
-        }
     }
 
     struct Triangle{

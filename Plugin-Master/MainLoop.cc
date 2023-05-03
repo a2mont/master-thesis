@@ -182,6 +182,10 @@ void MainLoop::insertion_pass(PriorityQueue* _A){
     std::vector<OpenMesh::SmartFaceHandle> facesContainingP;
     // foreach triangle in _A
     for(unsigned long i=0; i < _A->size(); ++i){
+        // Reset mesh property before pass
+        for(auto face: mesh_.faces()){
+            mesh_.property(face_visited_, face) = false;
+        }
         auto top = _A->top();
         _A->pop();
         auto fh = top.face_handle_;
@@ -197,7 +201,11 @@ void MainLoop::insertion_pass(PriorityQueue* _A){
         p = (vertices[0] + vertices[1] + vertices[2])/3;
         // Find all existing triangles whose circumscribing circle contains the new point.
         find_faces_with_p(facesContainingP, fh, p);
-        std::cout << "BBBBB" << std::endl;
+
+        for(auto f: facesContainingP){
+            mesh_.delete_face(f);
+        }
+
     }
 
     // Bowyer-Watson algorithm
@@ -211,11 +219,8 @@ void MainLoop::insertion_pass(PriorityQueue* _A){
 }
 
 void MainLoop::find_faces_with_p(std::vector<OpenMesh::SmartFaceHandle>& _list, OpenMesh::SmartFaceHandle _fh, const Point _p){
-    mesh_.property_stats(std::cout);
-    std::cout << mesh_.property(face_visited_,_fh) << std::endl;
     if(mesh_.property(face_visited_, _fh) || !contains_p(_fh, _p))
         return;
-    std::cout << "text" << std::endl;
     _list.emplace_back(_fh);
     mesh_.property(face_visited_, _fh) = true;
     for(auto ffh: _fh.faces()){
@@ -227,7 +232,7 @@ void MainLoop::find_faces_with_p(std::vector<OpenMesh::SmartFaceHandle>& _list, 
 bool MainLoop::contains_p(OpenMesh::SmartFaceHandle _fh, const Point _p){
     Point points[3];
     int i = 0;
-    std::cout << "CCCCCC" << std::endl;
+
     for(auto vh: _fh.vertices_ccw()){
         points[i++] = mesh_.point(vh);
     }
@@ -237,8 +242,10 @@ bool MainLoop::contains_p(OpenMesh::SmartFaceHandle _fh, const Point _p){
             points[1][0] - _p[0], points[1][1] - _p[1], pow(points[1][0] - _p[0],2) + pow(points[1][1] - _p[1],2),
             points[2][0] - _p[0], points[2][1] - _p[1], pow(points[2][0] - _p[0],2) + pow(points[2][1] - _p[1],2);
 
-    if(matrix.determinant() < 0)
+    if(matrix.determinant() < 0){
+        std::cout << _fh.idx() << " contains p" << std::endl;
         return true;
+    }
 
     return false;
 }

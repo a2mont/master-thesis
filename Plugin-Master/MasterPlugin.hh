@@ -60,6 +60,7 @@ private slots:
     void slot_show_constraint_vertex();
     void slot_displace_constraint_vertex();
     void slot_generate_base_mesh();
+    void slot_show_quality();
 
 
 public :
@@ -77,6 +78,7 @@ private:
     QWidget* tool_;
     QPushButton* pickButton_;
     QPushButton* displaceButton_;
+    QCheckBox* showQualityCheckBox_;
     QDoubleSpinBox* xValue_;
     QDoubleSpinBox* yValue_;
     QDoubleSpinBox* zValue_;
@@ -88,6 +90,8 @@ private:
     int constraint_vh_;
 
     const double q_min_ = 0.5;
+
+    TriMesh mesh_;
 
 };
 #endif

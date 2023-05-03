@@ -12,9 +12,9 @@ void MasterPlugin::initializePlugin()
     QSize size(600, 300);
     tool_->resize(size);
 
-    // Create button that can be toggled
-    // to (de)activate plugin's picking mode
     auto generateButton = new QPushButton(tr("Generate Mesh"));
+    showQualityCheckBox_ = new QCheckBox(tr("Show quality"));
+    showQualityCheckBox_->setChecked(true);
 
     pickButton_ = new QPushButton(tr("Select vertex"));
     pickButton_->setCheckable(true);
@@ -42,6 +42,7 @@ void MasterPlugin::initializePlugin()
 
     QGridLayout* grid = new QGridLayout();
     grid->addWidget(generateButton, 0,0);
+    grid->addWidget(showQualityCheckBox_, 0,1);
     grid->addWidget(labelVertex, 1, 0);
     grid->addWidget(pickButton_, 2, 0);
     grid->addWidget(labelDisplacement, 3,0);
@@ -55,6 +56,7 @@ void MasterPlugin::initializePlugin()
     connect(generateButton, SIGNAL(clicked()), this, SLOT(slot_generate_base_mesh()));
     connect(pickButton_, SIGNAL(clicked()), this, SLOT(slot_show_constraint_vertex()));
     connect(displaceButton_,  SIGNAL(clicked()), this, SLOT(slot_displace_constraint_vertex()));
+    connect(showQualityCheckBox_, SIGNAL(toggled(bool)), this, SLOT(slot_show_quality()));
 
     constraint_vh_ = 25;
 
@@ -111,7 +113,32 @@ void MasterPlugin::slotMouseEvent(QMouseEvent* _event) {
 
     emit updateView();
 }
+void MasterPlugin::slot_show_quality(){
+    for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
+         o_it != PluginFunctions::objectsEnd(); ++o_it) {
+        auto tri_obj = PluginFunctions::triMeshObject(*o_it);
+        auto trimesh = tri_obj->mesh();
 
+
+        if(showQualityCheckBox_->isChecked()){
+            Highlight::highlight_triangles(*trimesh);
+        }else{
+            for(auto fh: trimesh->faces()){
+                trimesh->set_color(fh,ACG::Vec4f(1,1,1,1));
+            }
+        }
+
+        tri_obj->meshNode()->drawMode(
+                    ACG::SceneGraph::DrawModes::WIREFRAME
+                  | ACG::SceneGraph::DrawModes::POINTS_COLORED
+                  | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED);
+        tri_obj->materialNode()->enable_alpha_test(0.8);
+
+
+        emit updatedObject(tri_obj->id(), UPDATE_COLOR);
+    }
+
+}
 
 void MasterPlugin::slot_show_constraint_vertex(){
     if(pickButton_->isChecked()) {
@@ -168,10 +195,16 @@ void MasterPlugin::slot_displace_constraint_vertex(){
 
         tri_obj->materialNode()->enable_alpha_test(0.8);
 
-        MainLoop loop(*trimesh, q_min_);
+
+        MainLoop loop(mesh_, q_min_);
+
+
         loop.loop(displacement, constraint_vh_, false);
         std::cout << "Loop ended" << std::endl;
-        Highlight::highlight_triangles(*trimesh);
+        *trimesh = mesh_;
+        trimesh->garbage_collection();
+        if(showQualityCheckBox_->isChecked())
+            Highlight::highlight_triangles(*trimesh);
 
         emit updatedObject(tri_obj->id(), UPDATE_ALL);
     }
@@ -183,10 +216,12 @@ void MasterPlugin::slot_generate_base_mesh(){
     auto *mesh_obj = PluginFunctions::triMeshObject(mesh_obj_id);
     mesh_obj->setName("Mesh");
     mesh_obj->materialNode()->set_point_size(6.0);
-    auto *mesh = mesh_obj->mesh();
     // Create vertices
     CustomMesh::VertexHandle vhandle[121];
     int count = 0;
+
+    auto mesh = mesh_obj->mesh();
+
     for (int i = 0; i < 11; ++i) {
        for (int j = 0; j < 11; ++j) {
            ACG::Vec3d p(-1 + 0.2*i, -1 + 0.2*j, 0);
@@ -214,6 +249,8 @@ void MasterPlugin::slot_generate_base_mesh(){
 
     mesh_obj->materialNode()->enable_alpha_test(0.8);
     emit updatedObject(mesh_obj->id(), UPDATE_ALL);
+
+    mesh_ = *mesh;
 
 }
 

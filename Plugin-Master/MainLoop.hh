@@ -6,6 +6,7 @@
 #include "VertexDisplacement.hh"
 #include "QualityEvaluation.hh"
 #include "Smoothing.hh"
+#include "eigen3/Eigen/Dense"
 
 class MainLoop
 {
@@ -16,13 +17,22 @@ public:
         vd_(_mesh),
         smoother_(_mesh),
         q_min_(_q_min){}
-    ~MainLoop(){}
+    ~MainLoop(){
+        mesh_.remove_property(face_visited_);
+        mesh_.property_stats(std::cout);
+        if(!mesh_.get_property_handle(face_visited_, "face visited"))
+            mesh_.add_property(face_visited_, "face visited");
+        mesh_.property_stats(std::cout);
+        for(auto fh: mesh_.faces()){
+            mesh_.property(face_visited_, fh) = false;
+        }
+    }
 
     struct Triangle{
-        int face_id_;
+        OpenMesh::SmartFaceHandle face_handle_;
         double quality_;
-        Triangle(int _face_id, double _quality): face_id_(_face_id), quality_(_quality){}
-        std::string toString() const {return "Face id: " + std::to_string(face_id_) + " Quality: " + std::to_string(quality_);}
+        Triangle(OpenMesh::SmartFaceHandle _face_handle, double _quality): face_handle_(_face_handle), quality_(_quality){}
+        std::string toString() const {return "Face id: " + std::to_string(face_handle_.idx()) + " Quality: " + std::to_string(quality_);}
     };
     struct CompareQuality{
         bool operator()(Triangle const& t1,Triangle const& t2){
@@ -31,6 +41,7 @@ public:
     };
 
     using PriorityQueue = std::priority_queue<Triangle, std::vector<Triangle>, CompareQuality>;
+    using Point = ACG::Vec3d;
 
 
 public:
@@ -46,10 +57,15 @@ private:
     void improve_mesh(PriorityQueue _badTriangles);
     void improve_triangle(Triangle _t);
 
+    void find_faces_with_p(std::vector<OpenMesh::SmartFaceHandle> &_list, OpenMesh::SmartFaceHandle _fh, const Point _p);
+    bool contains_p(OpenMesh::SmartFaceHandle _fh, const Point _p);
+
 private:
     TriMesh& mesh_;
     VertexDisplacement vd_;
     Smoothing smoother_;
+
+    OpenMesh::FPropHandleT<bool> face_visited_;
 
     PriorityQueue quality_queue_;
 

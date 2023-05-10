@@ -14,17 +14,22 @@ class MainLoop
 public:
     MainLoop(TriMesh& _mesh, double _q_min) :
         mesh_(_mesh),
-        vd_(_mesh),
-        smoother_(_mesh),
-        q_min_(_q_min){
-            if(!mesh_.get_property_handle(face_visited_, "face visited"))
-                mesh_.add_property(face_visited_, "face visited");
-            for(auto fh: mesh_.faces()){
-                mesh_.property(face_visited_, fh) = false;
+        q_min_(_q_min)
+    {
+        if(!mesh_.get_property_handle(face_visited_, "face visited"))
+            mesh_.add_property(face_visited_, "face visited");
+        for(auto fh: mesh_.faces()){
+            mesh_.property(face_visited_, fh) = false;
+        }
+        if(!mesh_.get_property_handle(cavity_edge_, "cavity edge"))
+            mesh_.add_property(cavity_edge_, "cavity edge");
+        for(auto vh: mesh_.vertices()){
+            mesh_.property(cavity_edge_, vh) = false;
         }
     }
     ~MainLoop(){
         mesh_.remove_property(face_visited_);
+        mesh_.remove_property(cavity_edge_);
     }
 
     struct Triangle{
@@ -61,10 +66,13 @@ private:
 
 private:
     TriMesh& mesh_;
-    VertexDisplacement vd_;
-    Smoothing smoother_;
 
+    // used in insertion pass
+
+    // true means the circumcircle contains the new vertex p
     OpenMesh::FPropHandleT<bool> face_visited_;
+    // true means the vertex is at the border of the cavity
+    OpenMesh::VPropHandleT<bool> cavity_edge_;
 
     PriorityQueue quality_queue_;
 

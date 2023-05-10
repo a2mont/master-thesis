@@ -188,6 +188,13 @@ void MasterPlugin::slot_displace_constraint_vertex(){
         for(auto fh: trimesh->faces()){
             trimesh->set_color(fh, ACG::Vec4f(1,1,1,1));
         }
+        for(auto vh : trimesh->vertices()) {
+            if(constraint_vh_ == vh.idx())
+                trimesh->set_color(vh, ACG::Vec4f(1,0,0,1));
+            else
+                trimesh->set_color(vh, ACG::Vec4f(1,1,1,0));
+        }
+
         tri_obj->meshNode()->drawMode(
                     ACG::SceneGraph::DrawModes::WIREFRAME
                   | ACG::SceneGraph::DrawModes::POINTS_COLORED

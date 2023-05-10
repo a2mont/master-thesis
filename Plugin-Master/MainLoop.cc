@@ -7,7 +7,7 @@ void MainLoop::loop(ACG::Vec3d _displacement, int _constraint_vh, bool _verbose,
     for(int i=0; i < _max_iter; ++i){
         PriorityQueue worstTriangles;
 
-        vd_.displace(_displacement, _constraint_vh, _verbose);
+        VertexDisplacement::displace(mesh_, _displacement, _constraint_vh, _verbose);
 
         for(auto fh: mesh_.faces()){
             double quality = QualityEvaluation::evaluate(fh, mesh_,_verbose);
@@ -45,7 +45,6 @@ void MainLoop::improve_mesh(PriorityQueue _badTriangles){
     while (!_badTriangles.empty()) {
         auto t = _badTriangles.top();
         _badTriangles.pop();
-        // TODO check if t exists
         if(!mesh_.status(t.face_handle_).deleted())
             improve_triangle(t);
     }
@@ -60,13 +59,13 @@ void MainLoop::improve_triangle(Triangle _t){
         changed = false;
         do {
             // A <- topological_pass(A,M)
-//            changed = topologial_pass(&A);
+            changed = topologial_pass(&A);
             if(A.top().quality_ >= q_min_)
                 return;
         } while (changed);
 
         // A <- edge_contraction_pass(A,M)
-//        edge_contraction_pass(&A);
+        edge_contraction_pass(&A);
         if(A.top().quality_ >= q_min_)
             return;
 
@@ -84,7 +83,7 @@ void MainLoop::improve_triangle(Triangle _t){
 
 bool MainLoop::topologial_pass(PriorityQueue* _A){
     //flips,edge removal, multi-face removal operations
-    std::cout << "Topological pass with _A of size: " <<  _A->size() <<std::endl;
+    std::cout << "Topological pass with _A of size: " <<  _A->size() << std::endl;
     bool changed = false;
     // E <- edges of the triangles in A
     std::vector<OpenMesh::SmartEdgeHandle> E;
@@ -102,7 +101,7 @@ bool MainLoop::topologial_pass(PriorityQueue* _A){
                 E.emplace_back(*fe_it);
         }
         // foreach e in E
-        // if e still exists attempt to contract e and smooth vertex created
+        // if e still exists attempt to flip e and smooth vertex created
         for(auto e: E){
             if(tempMesh.status(fh).deleted())
                 break;
@@ -159,7 +158,7 @@ void MainLoop::edge_contraction_pass(PriorityQueue* _A){
                     newTriangles.emplace_back(he_fh);
                 }
                 mesh_.collapse(he);
-                smoother_.smooth(he.to());
+                Smoothing::smooth(mesh_, he.to());
                 break;
             }
         }
@@ -181,45 +180,54 @@ void MainLoop::insertion_pass(PriorityQueue* _A){
 
     std::vector<OpenMesh::SmartFaceHandle> facesContainingP;
     // foreach triangle in _A
-    for(unsigned long i=0; i < _A->size(); ++i){
+    while(!_A->empty()){
         // Reset mesh property before pass
         for(auto face: mesh_.faces()){
             mesh_.property(face_visited_, face) = false;
+        }
+        for(auto vh: mesh_.vertices()){
+            mesh_.property(cavity_edge_, vh) = false;
         }
         auto top = _A->top();
         _A->pop();
         auto fh = top.face_handle_;
 
-        Point p;
-        Point vertices[3];
-        int j = 0;
+        if(mesh_.status(fh).deleted())
+            continue;
 
-        for(auto vh: fh.vertices()){
-            vertices[j++] = mesh_.point(vh);
-        }
+        Point p;
         // find the ideal position of new vertex p
-        p = (vertices[0] + vertices[1] + vertices[2])/3;
+        p = mesh_.calc_centroid(fh);
         // Find all existing triangles whose circumscribing circle contains the new point.
         find_faces_with_p(facesContainingP, fh, p);
-
         for(auto f: facesContainingP){
+            if(mesh_.status(f).deleted())
+                continue;
+            for(auto fvh: f.vertices()){
+                mesh_.property(cavity_edge_, fvh) = true;
+            }
+            // Delete these triangles; this creates a convex cavity.
             mesh_.delete_face(f);
         }
+        auto newVertex = mesh_.add_vertex(p);
 
+        for(auto vh: mesh_.vertices()){
+            if(!mesh_.status(vh).deleted() && mesh_.property(cavity_edge_, vh)){
+                //Join the new point to all the vertices on the boundary of the cavity
+                for(auto vvh: vh.vertices()){
+                    if(!mesh_.status(vvh).deleted() && mesh_.property(cavity_edge_, vvh)){
+                        mesh_.add_face(vh,vvh,newVertex);
+                    }
+                }
+            }
+        }
+        Smoothing::smooth(mesh_, newVertex);
     }
-
-    // Bowyer-Watson algorithm
-    // This can be done to find the triangle which contains the new point first. Then the neighbours of this
-//    triangle are searched and then their neighbours, etc., until no more neighbours have the
-//    new point in their circumscribing circle.
-//    3. Delete these triangles; this creates a convex cavity.
-//    4. Join the new point to all the vertices on the boundary of the cavity
-
 
 }
 
 void MainLoop::find_faces_with_p(std::vector<OpenMesh::SmartFaceHandle>& _list, OpenMesh::SmartFaceHandle _fh, const Point _p){
-    if(mesh_.property(face_visited_, _fh) || !contains_p(_fh, _p))
+    if(mesh_.property(face_visited_, _fh) || mesh_.status(_fh).deleted() || !contains_p(_fh, _p))
         return;
     _list.emplace_back(_fh);
     mesh_.property(face_visited_, _fh) = true;
@@ -264,7 +272,7 @@ void MainLoop::smoothing_pass(PriorityQueue* _A){
     }
 
     for(auto v: V){
-        smoother_.smooth(v);
+        Smoothing::smooth(mesh_, v);
         // A <- A U the triangles adjoining v in M
         for(auto vf_it = mesh_.vf_cwiter(v); vf_it.is_valid(); ++vf_it){
             double quality = QualityEvaluation::evaluate(*vf_it, mesh_);

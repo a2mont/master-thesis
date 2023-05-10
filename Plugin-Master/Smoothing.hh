@@ -5,14 +5,11 @@
 
 class Smoothing
 {
-public:
-    Smoothing(TriMesh& _mesh):mesh_(_mesh){}
-public:
-    void smooth(OpenMesh::SmartVertexHandle _vh);
 private:
-    void phi();
-private:
-    TriMesh& mesh_;
+    Smoothing();
+public:
+    static void smooth(TriMesh& _mesh, OpenMesh::SmartVertexHandle _vh);
+
 };
 
 #endif // OPENFLIPPER_SMOOTHING_HH

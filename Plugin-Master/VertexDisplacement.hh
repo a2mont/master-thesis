@@ -4,13 +4,10 @@
 #include <ObjectTypes/TriangleMesh/TriangleMesh.hh>
 
 class VertexDisplacement {
-public:
-    VertexDisplacement(TriMesh& _mesh): mesh_(_mesh){}
-    ~VertexDisplacement(){}
-public:
-    void displace(const ACG::Vec3d _displacement, const int _constraint_vh, const bool _verbose = false);
 private:
-    TriMesh& mesh_;
+    VertexDisplacement();
+public:
+    static void displace(TriMesh& _mesh, const ACG::Vec3d _displacement, const int _constraint_vh, const bool _verbose = false);
 
 };
 #endif // OPENFLIPPER_VERTEXDISPLACEMENT_HH

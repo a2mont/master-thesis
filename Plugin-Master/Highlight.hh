@@ -9,7 +9,7 @@
 
 class Highlight
 {
-public:
+private:
     Highlight();
 
 public :

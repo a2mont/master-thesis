@@ -14,6 +14,9 @@
 #include <ACG/Scenegraph/LineNode.hh>
 
 #include <ObjectTypes/TriangleMesh/TriangleMesh.hh>
+#include <OpenVolumeMesh/Geometry/VectorT.hh>
+#include <OpenVolumeMesh/Mesh/PolyhedralMesh.hh>
+#include <ObjectTypes/TetrahedralMesh/TetrahedralMesh.hh>
 
 #include "MainLoop.hh"
 #include "MasterToolbar.hh"
@@ -74,6 +77,7 @@ public :
 
 private:
     typedef OpenMesh::TriMesh_ArrayKernelT<> CustomMesh;
+    typedef OpenVolumeMesh::GeometricPolyhedralMeshV3f MyMesh;
     // The toolbox widget and the button in it
     QWidget* tool_;
     QPushButton* pickButton_;
@@ -83,6 +87,8 @@ private:
     QDoubleSpinBox* yValue_;
     QDoubleSpinBox* zValue_;
 
+    QComboBox* dimensionComboBox_;
+
     QSpinBox* iterationsSpinbox_;
     ACG::HaltonColors hcolors_;
 
@@ -91,7 +97,9 @@ private:
 
     const double q_min_ = 0.5;
 
-    TriMesh mesh_;
-
+    TriMesh trimesh_;
+    TetrahedralMesh tetmesh_;
+    void generate_triangular_mesh();
+    void generate_tet_mesh();
 };
 #endif

@@ -55,14 +55,15 @@ void MainLoop::improve_triangle(Triangle _t){
     PriorityQueue A;
     A.push(_t);
     bool changed;
-    for (int i = 0; i < 10; ++i) {
+    int maxIter = 1;
+    for (int i = 0; i < 1; ++i) {
         changed = false;
         do {
             // A <- topological_pass(A,M)
             changed = topologial_pass(&A);
             if(A.top().quality_ >= q_min_)
                 return;
-        } while (changed);
+        } while (changed && maxIter-- > 0);
 
         // A <- edge_contraction_pass(A,M)
         edge_contraction_pass(&A);
@@ -76,8 +77,9 @@ void MainLoop::improve_triangle(Triangle _t){
 
         // smoothing_pass()
         smoothing_pass(&A);
-        if(A.top().quality_ >= q_min_)
+        if(A.top().quality_ >= q_min_ || A.empty())
             return;
+
     }
 }
 
@@ -90,11 +92,11 @@ bool MainLoop::topologial_pass(PriorityQueue* _A){
     std::vector<OpenMesh::SmartFaceHandle> newTriangles;
 
     auto tempMesh = mesh_;
-    auto tempA = _A;
+    auto tempA = *_A;
 
-    for(unsigned long i=0; i < tempA->size(); ++i){
-        auto top = tempA->top();
-        tempA->pop();
+    for(unsigned long i=0; i < tempA.size(); ++i){
+        auto top = tempA.top();
+        tempA.pop();
         auto fh = top.face_handle_;
 
         for (auto fe_it = tempMesh.fe_cwiter(fh); fe_it.is_valid(); ++fe_it) {
@@ -108,7 +110,8 @@ bool MainLoop::topologial_pass(PriorityQueue* _A){
 
             if (tempMesh.is_flip_ok(e)) {
                 tempMesh.flip(e);
-                newTriangles = {e.h0().face(), e.h1().face()};
+                newTriangles.emplace_back(e.h0().face());
+                newTriangles.emplace_back(e.h1().face());
                 break;
             }
         }
@@ -117,11 +120,11 @@ bool MainLoop::topologial_pass(PriorityQueue* _A){
     // return surviving set in A and the triangles in M altered by the contractions
     for(auto new_fh: newTriangles){
         if (!mesh_.status(new_fh).deleted()) {
-            tempA->push(Triangle(new_fh, QualityEvaluation::evaluate(new_fh,mesh_)));
+            tempA.push(Triangle(new_fh, QualityEvaluation::evaluate(new_fh,mesh_)));
         }
     }
-    if(tempA->top().quality_ > _A->top().quality_){
-        *_A = *tempA;
+    if(tempA.top().quality_ > _A->top().quality_){
+        *_A = tempA;
         mesh_ = tempMesh;
         changed = true;
         return changed;
@@ -151,7 +154,7 @@ void MainLoop::edge_contraction_pass(PriorityQueue* _A){
             if(mesh_.status(fh).deleted())
                 break;
 
-            if (mesh_.is_collapse_ok(e.h0())) {
+            if (mesh_.is_collapse_ok(e.h0()) ) {
                 auto he = e.h0();
                 // get the faces altered by contraction
                 for(auto he_fh: he.from().faces()){
@@ -179,6 +182,7 @@ void MainLoop::insertion_pass(PriorityQueue* _A){
     std::cout << "Insertion pass with _A of size: " <<  _A->size()  << std::endl;
 
     std::vector<OpenMesh::SmartFaceHandle> facesContainingP;
+    std::vector<OpenMesh::SmartFaceHandle> facesCreated;
     // foreach triangle in _A
     while(!_A->empty()){
         // Reset mesh property before pass
@@ -205,23 +209,40 @@ void MainLoop::insertion_pass(PriorityQueue* _A){
                 continue;
             for(auto fvh: f.vertices()){
                 mesh_.property(cavity_edge_, fvh) = true;
+//                mesh_.set_color(fvh, ACG::Vec4f(0,1,1,1));
             }
             // Delete these triangles; this creates a convex cavity.
             mesh_.delete_face(f);
         }
         auto newVertex = mesh_.add_vertex(p);
-
+        int tn = 0;
         for(auto vh: mesh_.vertices()){
             if(!mesh_.status(vh).deleted() && mesh_.property(cavity_edge_, vh)){
+                mesh_.property(cavity_edge_, vh) = false;
+                std::cout << "Vh: " << vh.idx() <<std::endl;
                 //Join the new point to all the vertices on the boundary of the cavity
                 for(auto vvh: vh.vertices()){
                     if(!mesh_.status(vvh).deleted() && mesh_.property(cavity_edge_, vvh)){
-                        mesh_.add_face(vh,vvh,newVertex);
+
+                        auto nfh = mesh_.add_face(newVertex, vh, vvh);
+                        // To avoid invalid edges, https://stackoverflow.com/questions/24205196/addfacecomplex-edge-error-in-openmesh
+                        if(!nfh.is_valid())
+                            nfh = mesh_.add_face(newVertex, vvh, vh);
+                        std::cout << "Face "<< nfh.idx() << " created with: " << vvh.idx() << " " << newVertex.idx() <<" Total: "<<++tn <<std::endl;
+                        facesCreated.emplace_back(nfh);
                     }
                 }
             }
         }
+
         Smoothing::smooth(mesh_, newVertex);
+    }
+    std::cout << facesCreated.size() << std::endl;
+    // return surviving set in A and the triangles in M altered by the contractions
+    for(auto new_fh: facesCreated){
+        if (!mesh_.status(new_fh).deleted()) {
+            _A->push(Triangle(new_fh, QualityEvaluation::evaluate(new_fh,mesh_)));
+        }
     }
 
 }
@@ -240,7 +261,6 @@ void MainLoop::find_faces_with_p(std::vector<OpenMesh::SmartFaceHandle>& _list, 
 bool MainLoop::contains_p(OpenMesh::SmartFaceHandle _fh, const Point _p){
     Point points[3];
     int i = 0;
-
     for(auto vh: _fh.vertices_ccw()){
         points[i++] = mesh_.point(vh);
     }
@@ -251,10 +271,9 @@ bool MainLoop::contains_p(OpenMesh::SmartFaceHandle _fh, const Point _p){
             points[2][0] - _p[0], points[2][1] - _p[1], pow(points[2][0] - _p[0],2) + pow(points[2][1] - _p[1],2);
 
     if(matrix.determinant() < 0){
-        std::cout << _fh.idx() << " contains p" << std::endl;
+        std::cout << _fh.idx() << " contains p: " << _p << std::endl;
         return true;
     }
-
     return false;
 }
 

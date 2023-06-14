@@ -64,6 +64,7 @@ private slots:
     void slot_displace_constraint_vertex();
     void slot_generate_base_mesh();
     void slot_show_quality();
+    void slot_clear_constraints();
 
 
 public :
@@ -88,6 +89,7 @@ private:
     QDoubleSpinBox* zValue_;
 
     QComboBox* dimensionComboBox_;
+    QSpinBox* meshSize_;
 
     QSpinBox* iterationsSpinbox_;
     ACG::HaltonColors hcolors_;

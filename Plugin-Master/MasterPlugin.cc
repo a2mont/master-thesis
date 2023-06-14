@@ -16,18 +16,23 @@ void MasterPlugin::initializePlugin()
     dimensionComboBox_ = new QComboBox();
     dimensionComboBox_->addItem("Triangular Mesh");
     dimensionComboBox_->addItem("Tetrahedral Mesh");
+    meshSize_ = new QSpinBox();
+    meshSize_->setPrefix("Mesh edge size: ");
+    meshSize_->setMinimum(1);
+    meshSize_->setValue(2);
     auto generateButton = new QPushButton("Generate Mesh");
 
     // Vertex selection
     QLabel* labelVertex = new QLabel("Pick constraint vertices");
-    pickButton_ = new QPushButton("Select vertex");
+    pickButton_ = new QPushButton("Select mode");
     pickButton_->setCheckable(true);
     auto generationLabel = new QLabel("Generate base mesh");
+    auto clearButton = new QPushButton("Clear vertices");
     showQualityCheckBox_ = new QCheckBox("Show quality");
     showQualityCheckBox_->setChecked(true);
 
     // Vertext displacement
-    QLabel* labelDisplacement = new QLabel("Displacement values for constrained vertices");
+    QLabel* labelDisplacement = new QLabel("Displacement values for\nconstrained vertices");
     xValue_ = new QDoubleSpinBox();
     xValue_->setPrefix("x: ");
     xValue_->setSingleStep(0.01);
@@ -50,16 +55,18 @@ void MasterPlugin::initializePlugin()
     // Layout
     QGridLayout* grid = new QGridLayout();
     grid->addWidget(generationLabel, 0,0);
-    grid->addWidget(dimensionComboBox_, 2,0);
-    grid->addWidget(generateButton, 2,1);
+    grid->addWidget(dimensionComboBox_, 1,0);
+    grid->addWidget(meshSize_, 2,0);
+    grid->addWidget(generateButton, 2,2);
     grid->addWidget(labelVertex, 3, 0);
-    grid->addWidget(pickButton_, 4, 0);
-    grid->addWidget(showQualityCheckBox_, 4,1);
-    grid->addWidget(labelDisplacement, 5,0);
-    grid->addWidget(xValue_, 6,0);
-    grid->addWidget(yValue_, 6,1);
-    grid->addWidget(zValue_, 6,2);
-    grid->addWidget(displaceButton_, 7,0);
+    grid->addWidget(showQualityCheckBox_, 4,0);
+    grid->addWidget(pickButton_, 5, 0);
+    grid->addWidget(clearButton,5,2);
+    grid->addWidget(labelDisplacement, 6,0);
+    grid->addWidget(xValue_, 7,0);
+    grid->addWidget(yValue_, 7,1);
+    grid->addWidget(zValue_, 7,2);
+    grid->addWidget(displaceButton_, 8,2);
     tool_->setLayout(grid);
 
     // Connections
@@ -67,10 +74,10 @@ void MasterPlugin::initializePlugin()
     connect(pickButton_, SIGNAL(clicked()), this, SLOT(slot_show_constraint_vertex()));
     connect(displaceButton_,  SIGNAL(clicked()), this, SLOT(slot_displace_constraint_vertex()));
     connect(showQualityCheckBox_, SIGNAL(toggled(bool)), this, SLOT(slot_show_quality()));
+    connect(clearButton, SIGNAL(clicked()), this, SLOT(slot_clear_constraints()));
 
     // Arbitrary id for constraint vertex
-    constraint_vhs_[15] = 15;
-
+    constraint_vhs_[7] = 7;
 
     // Add the Toolbox
     emit addToolbox("Master", tool_);
@@ -114,7 +121,11 @@ void MasterPlugin::slotMouseEvent(QMouseEvent* _event) {
                         else
                             constraint_vhs_.erase(vh.idx());
 
-                        std::cout << constraint_vhs_.size() << std::endl;
+                        std::cout << "Constraint vertices" << std::endl;
+                        for(auto v: constraint_vhs_){
+                            std::cout << v.first <<"," ;
+                        }
+                        std::cout << "\nTotal: " << constraint_vhs_.size() << std::endl;
                         slot_show_constraint_vertex();
 
                         return;
@@ -125,6 +136,12 @@ void MasterPlugin::slotMouseEvent(QMouseEvent* _event) {
     }
 
     emit updateView();
+}
+
+void MasterPlugin::slot_clear_constraints(){
+    constraint_vhs_.clear();
+    std::cout << "Constraint vertices cleared" << std::endl;
+    slot_show_constraint_vertex();
 }
 void MasterPlugin::slot_show_quality(){
     for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
@@ -205,10 +222,9 @@ void MasterPlugin::slot_displace_constraint_vertex(){
         tri_obj->materialNode()->enable_alpha_test(0.8);
 
 
-        MainLoop loop(trimesh_, q_min_);
+        MainLoop loop(trimesh_, q_min_, constraint_vhs_);
 
-
-        loop.loop(displacement, constraint_vhs_, false);
+        loop.loop(displacement, false);
         std::cout << "Loop ended" << std::endl;
         *trimesh = trimesh_;
         trimesh->garbage_collection();
@@ -220,12 +236,14 @@ void MasterPlugin::slot_displace_constraint_vertex(){
             Highlight::highlight_triangles(*trimesh);
 
         emit updatedObject(tri_obj->id(), UPDATE_ALL);
+
     }
 
 }
 
 void MasterPlugin::slot_generate_base_mesh(){
-    std::cout << "Generating a " << dimensionComboBox_->currentText().toStdString() << std::endl;
+    std::cout << "Generating a " << meshSize_->value() << "x" << meshSize_->value() << " "
+              <<dimensionComboBox_->currentText().toStdString() << std::endl;
     switch (dimensionComboBox_->currentIndex()) {
     case 0:
         generate_triangular_mesh();
@@ -253,8 +271,8 @@ void MasterPlugin::generate_triangular_mesh(){
 
     auto mesh = mesh_obj->mesh();
 
-    for (int i = 0; i < 11; ++i) {
-       for (int j = 0; j < 11; ++j) {
+    for (int i = 0; i < meshSize_->value()+1; ++i) {
+       for (int j = 0; j < meshSize_->value()+1; ++j) {
            ACG::Vec3d p(-1 + 0.2*i, -1 + 0.2*j, 0);
            vhandle[count] = mesh->add_vertex(p);
            mesh->set_color(vhandle[count++], ACG::Vec4f(1,1,1,0));
@@ -262,12 +280,14 @@ void MasterPlugin::generate_triangular_mesh(){
     }
 
     // Create faces
-    for (int i = 0; i < 10; ++i) {
-       for (int j = 0; j < 10; ++j) {
+    for (int i = 0; i < meshSize_->value(); ++i) {
+       for (int j = 0; j < meshSize_->value(); ++j) {
            // First triangle
-           CustomMesh::FaceHandle fh1 = mesh->add_face(vhandle[i*11+j], vhandle[i*11+j+1], vhandle[(i+1)*11+j+1]);
+           CustomMesh::FaceHandle fh1 = mesh->add_face(vhandle[i*(meshSize_->value()+1)+j],
+                   vhandle[i*(meshSize_->value()+1)+j+1], vhandle[(i+1)*(meshSize_->value()+1)+j+1]);
            // Second triangle
-           CustomMesh::FaceHandle fh2 = mesh->add_face(vhandle[(i+1)*11+j+1], vhandle[(i+1)*11+j], vhandle[i*11+j]);
+           CustomMesh::FaceHandle fh2 = mesh->add_face(vhandle[(i+1)*(meshSize_->value()+1)+j+1],
+                   vhandle[(i+1)*(meshSize_->value()+1)+j], vhandle[i*(meshSize_->value()+1)+j]);
            mesh->set_color(fh1, ACG::Vec4f(1,1,1,1));
            mesh->set_color(fh2, ACG::Vec4f(1,1,1,1));
        }

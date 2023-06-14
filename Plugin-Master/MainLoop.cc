@@ -2,12 +2,12 @@
 
 
 
-void MainLoop::loop(ACG::Vec3d _displacement, std::map<int,int> _constraint_vhs, bool _verbose,int _max_iter ){
+void MainLoop::loop(ACG::Vec3d _displacement, bool _verbose,int _max_iter ){
 
     for(int i=0; i < _max_iter; ++i){
         PriorityQueue worstTriangles;
 
-        VertexDisplacement::displace(mesh_, _displacement, _constraint_vhs, _verbose);
+        VertexDisplacement::displace(mesh_, _displacement, constraint_vhs_, _verbose);
 
         for(auto fh: mesh_.faces()){
             double quality = QualityEvaluation::evaluate(fh, mesh_,_verbose);
@@ -55,28 +55,28 @@ void MainLoop::improve_triangle(Triangle _t){
     PriorityQueue A;
     A.push(_t);
     bool changed;
-    int maxIter = 1;
+    int maxIter = 10;
     for (int i = 0; i < 1; ++i) {
         changed = false;
         do {
             // A <- topological_pass(A,M)
-//            changed = topologial_pass(&A);
+            changed = topologial_pass(&A);
             if(A.top().quality_ >= q_min_)
                 return;
         } while (changed && maxIter-- > 0);
 
         // A <- edge_contraction_pass(A,M)
-        edge_contraction_pass(&A);
+//        edge_contraction_pass(&A);
         if(A.top().quality_ >= q_min_)
             return;
 
         // A <- insertion_pass(A,M)
-        insertion_pass(&A);
+//        insertion_pass(&A);
         if(A.top().quality_ >= q_min_)
             return;
 
         // smoothing_pass()
-        smoothing_pass(&A);
+//        smoothing_pass(&A);
         if(A.top().quality_ >= q_min_ || A.empty())
             return;
 
@@ -109,6 +109,9 @@ bool MainLoop::topologial_pass(PriorityQueue* _A){
                 break;
 
             if (tempMesh.is_flip_ok(e)) {
+                std::cout << "Flipped " << e.h0().from() << " , " << e.h0().to() << std::endl;
+                auto f0 = e.h0().face();
+                auto f1 = e.h1().face();
                 tempMesh.flip(e);
                 newTriangles.emplace_back(e.h0().face());
                 newTriangles.emplace_back(e.h1().face());
@@ -120,7 +123,8 @@ bool MainLoop::topologial_pass(PriorityQueue* _A){
     // return surviving set in A and the triangles in M altered by the contractions
     for(auto new_fh: newTriangles){
         if (!mesh_.status(new_fh).deleted()) {
-            tempA.push(Triangle(new_fh, QualityEvaluation::evaluate(new_fh,mesh_)));
+            auto qual = QualityEvaluation::evaluate(new_fh,tempMesh);
+            tempA.push(Triangle(new_fh, qual));
         }
     }
     if(tempA.top().quality_ > _A->top().quality_){
@@ -154,14 +158,25 @@ void MainLoop::edge_contraction_pass(PriorityQueue* _A){
             if(mesh_.status(fh).deleted())
                 break;
 
-            if (mesh_.is_collapse_ok(e.h0()) ) {
-                auto he = e.h0();
+            auto he = e.h0();
+            auto from = he.from();
+            auto to = he.to();
+            if(mesh_.is_boundary(to), mesh_.is_boundary(from))
+                continue;
+            std::cout << from << to <<std::endl;
+            if (mesh_.is_collapse_ok(he)) {
                 // get the faces altered by contraction
-                for(auto he_fh: he.from().faces()){
+                for(auto he_fh: from.faces()){
                     newTriangles.emplace_back(he_fh);
                 }
+
+                if(constraint_vhs_.count(from.idx()) > 0){
+                    constraint_vhs_.erase(from.idx());
+                    constraint_vhs_[to.idx()] = to.idx();
+                }
+
                 mesh_.collapse(he);
-                Smoothing::smooth(mesh_, he.to());
+                Smoothing::smooth(mesh_, to);
                 break;
             }
         }
@@ -212,6 +227,10 @@ void MainLoop::insertion_pass(PriorityQueue* _A){
 //                mesh_.set_color(fvh, ACG::Vec4f(0,1,1,1));
             }
             // Delete these triangles; this creates a convex cavity.
+            for(auto v: f.vertices()){
+                if(constraint_vhs_.count(v.idx()>0))
+                    constraint_vhs_.erase(v.idx());
+            }
             mesh_.delete_face(f);
         }
         auto newVertex = mesh_.add_vertex(p);

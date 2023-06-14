@@ -12,8 +12,9 @@ class MainLoop
 {
 
 public:
-    MainLoop(TriMesh& _mesh, double _q_min) :
+    MainLoop(TriMesh& _mesh, double _q_min, std::map<int,int>& _constraint_vhs) :
         mesh_(_mesh),
+        constraint_vhs_(_constraint_vhs),
         q_min_(_q_min)
     {
         if(!mesh_.get_property_handle(face_visited_, "face visited"))
@@ -49,9 +50,9 @@ public:
 
 
 public:
-    void loop(ACG::Vec3d _displacement, std::map<int,int> _constraint_vhs, bool _verbose= false, int _max_iter=1);
+    void loop(ACG::Vec3d _displacement, bool _verbose= false, int _max_iter=1);
 private:
-    void reset_queue(PriorityQueue& _queue);
+    void static reset_queue(PriorityQueue& _queue);
 
     bool topologial_pass(PriorityQueue* _A);
     void edge_contraction_pass(PriorityQueue* _A);
@@ -76,6 +77,7 @@ private:
 
     PriorityQueue quality_queue_;
 
+    std::map<int,int>& constraint_vhs_;
 
     const double q_min_;
 };

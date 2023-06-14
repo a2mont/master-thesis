@@ -20,9 +20,10 @@ double QualityEvaluation::evaluate(const OpenMesh::SmartFaceHandle _face, TriMes
 //    l_harm = calculate_l_harm(edge_lengths); used for tets
 //    l_rms = calculate_l_rms(edge_lengths); used for tets
 
-    if(!std::isnan(area) && squaredEdgeLength > 0.) //&& !std::isnan(l_harm) && !std::isnan(l_rms))
+    if(!std::isnan(area) && squaredEdgeLength > 0.){ //&& !std::isnan(l_harm) && !std::isnan(l_rms))
 //      quality = 6 * sqrt(2) * area * l_harm / pow(l_rms, 4); used for tets
         quality = 4 * sqrt(3) * area / squaredEdgeLength;
+    }
 
     if(_verbose)
         std::cout <<
@@ -43,13 +44,16 @@ double QualityEvaluation::evaluate(const OpenMesh::SmartFaceHandle _face, TriMes
 
 double QualityEvaluation::calculate_area(std::vector<double> _edge_lengths){
     double area = 0.;
-    double x1,x2,x3,semi_perimeter;
+    double x1,x2,x3,semi_perimeter,total;
     x1 = _edge_lengths[0];
     x2 = _edge_lengths[1];
     x3 = _edge_lengths[2];
     semi_perimeter = (x1+x2+x3)/2;
 
-    area = sqrt(semi_perimeter*(semi_perimeter-x1)*(semi_perimeter-x2)*(semi_perimeter-x3));
+    total = semi_perimeter*(semi_perimeter-x1)*(semi_perimeter-x2)*(semi_perimeter-x3);
+    total = total < 0. ? 0. : total;
+
+    area = sqrt(total);
     return area;
 }
 

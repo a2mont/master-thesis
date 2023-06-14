@@ -19,7 +19,7 @@ void MasterPlugin::initializePlugin()
     auto generateButton = new QPushButton("Generate Mesh");
 
     // Vertex selection
-    QLabel* labelVertex = new QLabel("Pick constraint vertex");
+    QLabel* labelVertex = new QLabel("Pick constraint vertices");
     pickButton_ = new QPushButton("Select vertex");
     pickButton_->setCheckable(true);
     auto generationLabel = new QLabel("Generate base mesh");
@@ -27,7 +27,7 @@ void MasterPlugin::initializePlugin()
     showQualityCheckBox_->setChecked(true);
 
     // Vertext displacement
-    QLabel* labelDisplacement = new QLabel("Displacement values for constrained vertex");
+    QLabel* labelDisplacement = new QLabel("Displacement values for constrained vertices");
     xValue_ = new QDoubleSpinBox();
     xValue_->setPrefix("x: ");
     xValue_->setSingleStep(0.01);
@@ -44,7 +44,7 @@ void MasterPlugin::initializePlugin()
     zValue_->setSingleStep(0.01);
     zValue_->setRange(-1.0, 1.0);
 
-    displaceButton_ = new QPushButton("Displace vertex");
+    displaceButton_ = new QPushButton("Displace vertices");
 
 
     // Layout
@@ -69,7 +69,7 @@ void MasterPlugin::initializePlugin()
     connect(showQualityCheckBox_, SIGNAL(toggled(bool)), this, SLOT(slot_show_quality()));
 
     // Arbitrary id for constraint vertex
-    constraint_vh_ = 15;
+    constraint_vhs_[15] = 15;
 
 
     // Add the Toolbox
@@ -108,11 +108,13 @@ void MasterPlugin::slotMouseEvent(QMouseEvent* _event) {
                         auto vh = tri_obj->mesh()->vertex_handle(target_idx);
                         if (vh == TriMesh::InvalidVertexHandle)
                             return;
-                        //set constraint vertices (for #selected vertices >1)
-//                        for(int i=0; i<2; ++i)
-//                            if(tool_->vertex_number_cb->currentIndex() == i)
-                        constraint_vh_ = vh.idx();
 
+                        if(constraint_vhs_.count(vh.idx()) == 0)
+                            constraint_vhs_[vh.idx()] = vh.idx();
+                        else
+                            constraint_vhs_.erase(vh.idx());
+
+                        std::cout << constraint_vhs_.size() << std::endl;
                         slot_show_constraint_vertex();
 
                         return;
@@ -169,8 +171,10 @@ void MasterPlugin::slot_show_constraint_vertex(){
         auto trimesh = tri_obj->mesh();
 
         tri_obj->materialNode()->set_point_size(12);
-
-        trimesh->set_color(trimesh->vertex_handle(constraint_vh_), ACG::Vec4f(1,0,0,1));
+        for(auto vh: trimesh->vertices())
+            trimesh->set_color(vh, ACG::Vec4f(1,1,1,0));
+        for(auto vh: constraint_vhs_)
+            trimesh->set_color(trimesh->vertex_handle(vh.first), ACG::Vec4f(1,0,0,1));
 
         tri_obj->meshNode()->drawMode(
                     ACG::SceneGraph::DrawModes::WIREFRAME
@@ -204,12 +208,13 @@ void MasterPlugin::slot_displace_constraint_vertex(){
         MainLoop loop(trimesh_, q_min_);
 
 
-        loop.loop(displacement, constraint_vh_, false);
+        loop.loop(displacement, constraint_vhs_, false);
         std::cout << "Loop ended" << std::endl;
         *trimesh = trimesh_;
         trimesh->garbage_collection();
 
-        trimesh->set_color(trimesh->vertex_handle(constraint_vh_), ACG::Vec4f(1,0,0,1));
+        for(auto vh: constraint_vhs_)
+            trimesh->set_color(trimesh->vertex_handle(vh.first), ACG::Vec4f(1,0,0,1));
 
         if(showQualityCheckBox_->isChecked())
             Highlight::highlight_triangles(*trimesh);

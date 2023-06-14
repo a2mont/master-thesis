@@ -49,7 +49,7 @@ public:
 
 
 public:
-    void loop(ACG::Vec3d _displacement, int _constraint_vh, bool _verbose= false, int _max_iter=1);
+    void loop(ACG::Vec3d _displacement, std::map<int,int> _constraint_vhs, bool _verbose= false, int _max_iter=1);
 private:
     void reset_queue(PriorityQueue& _queue);
 

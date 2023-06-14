@@ -2,12 +2,12 @@
 
 
 
-void MainLoop::loop(ACG::Vec3d _displacement, int _constraint_vh, bool _verbose,int _max_iter ){
+void MainLoop::loop(ACG::Vec3d _displacement, std::map<int,int> _constraint_vhs, bool _verbose,int _max_iter ){
 
     for(int i=0; i < _max_iter; ++i){
         PriorityQueue worstTriangles;
 
-        VertexDisplacement::displace(mesh_, _displacement, _constraint_vh, _verbose);
+        VertexDisplacement::displace(mesh_, _displacement, _constraint_vhs, _verbose);
 
         for(auto fh: mesh_.faces()){
             double quality = QualityEvaluation::evaluate(fh, mesh_,_verbose);
@@ -60,7 +60,7 @@ void MainLoop::improve_triangle(Triangle _t){
         changed = false;
         do {
             // A <- topological_pass(A,M)
-            changed = topologial_pass(&A);
+//            changed = topologial_pass(&A);
             if(A.top().quality_ >= q_min_)
                 return;
         } while (changed && maxIter-- > 0);

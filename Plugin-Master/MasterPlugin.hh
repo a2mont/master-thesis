@@ -92,8 +92,8 @@ private:
     QSpinBox* iterationsSpinbox_;
     ACG::HaltonColors hcolors_;
 
-    //store selected vertex
-    int constraint_vh_;
+    //store selected vertices
+    std::map<int,int> constraint_vhs_;
 
     const double q_min_ = 0.5;
 

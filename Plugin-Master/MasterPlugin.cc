@@ -17,9 +17,9 @@ void MasterPlugin::initializePlugin()
     dimensionComboBox_->addItem("Triangular Mesh");
     dimensionComboBox_->addItem("Tetrahedral Mesh");
     meshSize_ = new QSpinBox();
-    meshSize_->setPrefix("Mesh edge size: ");
+    meshSize_->setPrefix("Mesh size: ");
     meshSize_->setMinimum(1);
-    meshSize_->setValue(2);
+    meshSize_->setValue(10);
     auto generateButton = new QPushButton("Generate Mesh");
 
     // Vertex selection
@@ -77,13 +77,14 @@ void MasterPlugin::initializePlugin()
     connect(clearButton, SIGNAL(clicked()), this, SLOT(slot_clear_constraints()));
 
     // Arbitrary id for constraint vertex
-    constraint_vhs_[7] = 7;
+    constraint_vhs_[51] = 51;
 
     // Add the Toolbox
     emit addToolbox("Master", tool_);
 }
 
-void MasterPlugin::pluginInitialized(){
+void MasterPlugin::pluginsInitialized(){
+    slot_generate_base_mesh();
     emit addPickMode("Pick Constraint");
 
 

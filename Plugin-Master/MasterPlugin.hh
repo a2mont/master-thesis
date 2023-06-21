@@ -57,7 +57,7 @@ signals:
 private slots:
     // initialization functions
     void initializePlugin();
-    void pluginInitialized();
+    void pluginsInitialized();
 
     void slotMouseEvent(QMouseEvent* _event) ;
     void slot_show_constraint_vertex();

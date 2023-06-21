@@ -24,8 +24,13 @@ public:
         }
         if(!mesh_.get_property_handle(cavity_edge_, "cavity edge"))
             mesh_.add_property(cavity_edge_, "cavity edge");
+        for(auto heh: mesh_.halfedges()){
+            mesh_.property(cavity_edge_, heh) = false;
+        }
+        if(!mesh_.get_property_handle(deleted_border_, "deleted border"))
+            mesh_.add_property(deleted_border_, "deleted border");
         for(auto vh: mesh_.vertices()){
-            mesh_.property(cavity_edge_, vh) = false;
+            mesh_.property(deleted_border_, vh) = false;
         }
     }
     ~MainLoop(){
@@ -57,7 +62,7 @@ private:
     bool topologial_pass(PriorityQueue* _A);
     void edge_contraction_pass(PriorityQueue* _A);
     void insertion_pass(PriorityQueue* _A);
-    void smoothing_pass(PriorityQueue* _A);
+    void smoothing_pass(PriorityQueue* _A, int iterations);
 
     void improve_mesh(PriorityQueue _badTriangles);
     void improve_triangle(Triangle _t);
@@ -72,8 +77,10 @@ private:
 
     // true means the circumcircle contains the new vertex p
     OpenMesh::FPropHandleT<bool> face_visited_;
-    // true means the vertex is at the border of the cavity
-    OpenMesh::VPropHandleT<bool> cavity_edge_;
+    // true means the halfedge is at the border of the cavity
+    OpenMesh::HPropHandleT<bool> cavity_edge_;
+    // true means the vertex from a deleted face is at the border of the mesh
+    OpenMesh::VPropHandleT<bool> deleted_border_;
 
     PriorityQueue quality_queue_;
 

@@ -80,18 +80,8 @@ private:
     typedef OpenMesh::TriMesh_ArrayKernelT<> CustomMesh;
     typedef OpenVolumeMesh::GeometricPolyhedralMeshV3f MyMesh;
     // The toolbox widget and the button in it
-    QWidget* tool_;
-    QPushButton* pickButton_;
-    QPushButton* displaceButton_;
-    QCheckBox* showQualityCheckBox_;
-    QDoubleSpinBox* xValue_;
-    QDoubleSpinBox* yValue_;
-    QDoubleSpinBox* zValue_;
+    MasterToolbar* tool_;
 
-    QComboBox* dimensionComboBox_;
-    QSpinBox* meshSize_;
-
-    QSpinBox* iterationsSpinbox_;
     ACG::HaltonColors hcolors_;
 
     //store selected vertices

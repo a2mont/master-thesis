@@ -14,21 +14,22 @@ void MainLoop::loop(ACG::Vec3d _displacement, bool _verbose,int _max_iter ){
             quality_queue_.push(Triangle(fh, quality));
         }
 
-        Triangle worstTriangle = quality_queue_.top();
-        while(worstTriangle.quality_ < q_min_){
-            worstTriangles.push(worstTriangle);
+        Triangle currentWorst = quality_queue_.top();
+        while(currentWorst.quality_ < q_min_){
+            worstTriangles.push(currentWorst);
             quality_queue_.pop();
-            worstTriangle = quality_queue_.top();
+            currentWorst = quality_queue_.top();
         }
+
         if(worstTriangles.empty())
-            std::cout << "All triangles are of good enough quality\nWorst triangle: " << worstTriangle.toString() << std::endl;
-        else
+            std::cout << "All triangles are of good enough quality\nWorst triangle: " << currentWorst.toString() << std::endl;
+        else{
             std::cout << worstTriangles.size() << " triangles of bad quality"
-                      << "\nWorst triangle: " << worstTriangle.toString()
+                      << "\nWorst triangle: " << worstTriangles.top().toString()
                       << std::endl;
+        }
 
         improve_mesh(worstTriangles);
-
         reset_queue(quality_queue_);
         mesh_.garbage_collection();
     }
@@ -46,8 +47,9 @@ void MainLoop::improve_mesh(PriorityQueue _badTriangles){
     while (!_badTriangles.empty()) {
         auto t = _badTriangles.top();
         _badTriangles.pop();
-        if(!mesh_.status(t.face_handle_).deleted())
+        if(!mesh_.status(t.face_handle_).deleted()){
             improve_triangle(t);
+        }
     }
 }
 
@@ -56,7 +58,7 @@ void MainLoop::improve_triangle(Triangle _t){
     PriorityQueue A;
     A.push(_t);
     bool changed;
-    int maxIter = 100;
+    int maxIter = 10;
     for (int i = 0; i < 1; ++i) {
         changed = false;
         do {
@@ -67,7 +69,7 @@ void MainLoop::improve_triangle(Triangle _t){
         } while (changed && maxIter-- > 0);
 
         // A <- edge_contraction_pass(A,M)
-//        edge_contraction_pass(&A);
+        edge_contraction_pass(&A);
         if(A.top().quality_ >= q_min_)
             return;
 
@@ -77,7 +79,7 @@ void MainLoop::improve_triangle(Triangle _t){
             return;
 
         // smoothing_pass()
-//        smoothing_pass(&A, 1);
+        smoothing_pass(&A, 1);
         if(A.top().quality_ >= q_min_ || A.empty())
             return;
 
@@ -95,7 +97,7 @@ bool MainLoop::topologial_pass(PriorityQueue* _A){
     auto tempMesh = mesh_;
     auto tempA = *_A;
 
-    for(unsigned long i=0; i < tempA.size(); ++i){
+    while(!tempA.empty()){
         auto top = tempA.top();
         tempA.pop();
         auto fh = top.face_handle_;
@@ -111,8 +113,6 @@ bool MainLoop::topologial_pass(PriorityQueue* _A){
 
             if (tempMesh.is_flip_ok(e)) {
                 std::cout << "Flipped " << e.h0().from() << " , " << e.h0().to() << std::endl;
-                auto f0 = e.h0().face();
-                auto f1 = e.h1().face();
                 tempMesh.flip(e);
                 newTriangles.emplace_back(e.h0().face());
                 newTriangles.emplace_back(e.h1().face());
@@ -148,20 +148,20 @@ void MainLoop::edge_contraction_pass(PriorityQueue* _A){
     auto tempMesh = mesh_;
     auto tempA = *_A;
 
-    for(unsigned long i=0; i < tempA.size(); ++i){
+    while(!tempA.empty()){
         auto top = tempA.top();
         tempA.pop();
         auto fh = top.face_handle_;
         E.clear();
 
+        if(tempMesh.status(fh).deleted())
+            continue;
         for (auto fe_it = tempMesh.fe_cwiter(fh); fe_it.is_valid(); ++fe_it) {
                 E.emplace_back(*fe_it);
         }
         // foreach e in E
         // if e still exists attempt to contract e and smooth vertex created
         for(auto e: E){
-            if(tempMesh.status(fh).deleted())
-                break;
 
             auto he = e.h0();
             auto from = he.from();
@@ -231,8 +231,10 @@ void MainLoop::insertion_pass(PriorityQueue* _A){
         Point p;
         // find the ideal position of new vertex p
         p = mesh_.calc_centroid(fh);
+        std::cout << "p" << std::endl;
         // Find all existing triangles whose circumscribing circle contains the new point.
         find_faces_with_p(facesContainingP, fh, p);
+        std::cout << "find faces" << std::endl;
         for(auto f: facesContainingP){
             if(mesh_.status(f).deleted())
                 continue;
@@ -243,39 +245,49 @@ void MainLoop::insertion_pass(PriorityQueue* _A){
                     borderPairs[opp.from()] = opp.to();
                 }
             }
-            // Delete these triangles; this creates a convex cavity.
+            // Update constraint vertices
             for(auto v: f.vertices()){
                 if(constraint_vhs_.count(v.idx()>0))
                     constraint_vhs_.erase(v.idx());
             }
+        }
+        std::cout << "update" << std::endl;
+        // Delete these triangles; this creates a convex cavity.
+        for(auto f: facesContainingP){
+            if(mesh_.status(f).deleted())
+                continue;
             mesh_.delete_face(f, false);
             cavityCreated = true;
         }
+        std::cout << "delete" << std::endl;
         // If no cavity is created, no need to add a new vertex
         if(!cavityCreated){
             continue;
         }
         auto newVertex = mesh_.add_vertex(p);
+        mesh_.set_color(newVertex, ACG::Vec4f(1,1,1,0));
         int tn = 0;
         for(auto heh: mesh_.halfedges()){
             if(!mesh_.status(heh).deleted() && mesh_.property(cavity_edge_, heh)){
                 mesh_.property(cavity_edge_, heh) = false;
                 //Join the new point to all the vertices on the boundary of the cavity
                 auto nfh = mesh_.add_face(newVertex, heh.from(), heh.to());
-                std::cout << "Face "<< nfh.idx() << " created with: " << " Total: "<<++tn <<std::endl;
+                std::cout << "Face "<< nfh.idx() << " created with: " << newVertex.idx() << " " << heh.from().idx()
+                          << " " << heh.to().idx() <<" Total: "<<++tn <<std::endl;
                 facesCreated.emplace_back(nfh);
             }
         }
+        std::cout << "fill" << std::endl;
         for(auto border_vh: borderPairs){
             if(!mesh_.status(border_vh.first).deleted() && !mesh_.status(border_vh.second).deleted()){
                 auto nfh = mesh_.add_face(newVertex, border_vh.second, border_vh.first);
-                std::cout << "Border face "<< nfh.idx() << " created with: " << border_vh.first.idx()
+                std::cout << "Border face "<< nfh.idx() << " created with: " << newVertex.idx() << " " << border_vh.first.idx()
                           << " " << border_vh.second.idx() <<"Total: "<<++tn <<std::endl;
                 facesCreated.emplace_back(nfh);
             }
 
         }
-
+        std::cout << "border" << std::endl;
         Smoothing::smooth(mesh_, newVertex);
     }
     // return surviving set in A and the triangles in M altered by the contractions
@@ -284,6 +296,7 @@ void MainLoop::insertion_pass(PriorityQueue* _A){
             _A->push(Triangle(new_fh, QualityEvaluation::evaluate(new_fh,mesh_)));
         }
     }
+    std::cout << "push new" << std::endl;
 
 }
 
@@ -309,7 +322,6 @@ bool MainLoop::contains_p(OpenMesh::SmartFaceHandle _fh, const Point _p){
             points[0][0] - _p[0], points[0][1] - _p[1], pow(points[0][0] - _p[0],2) + pow(points[0][1] - _p[1],2),
             points[1][0] - _p[0], points[1][1] - _p[1], pow(points[1][0] - _p[0],2) + pow(points[1][1] - _p[1],2),
             points[2][0] - _p[0], points[2][1] - _p[1], pow(points[2][0] - _p[0],2) + pow(points[2][1] - _p[1],2);
-
     if(matrix.determinant() < 0){
         std::cout << _fh.idx() << " contains p: " << _p << std::endl;
         return true;

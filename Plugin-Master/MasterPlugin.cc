@@ -8,83 +8,28 @@
 
 void MasterPlugin::initializePlugin()
 {  
-    tool_ = new QWidget();
+    tool_ = new MasterToolbar();
     QSize size(600, 300);
     tool_->resize(size);
 
-    // Mesh Generation
-    dimensionComboBox_ = new QComboBox();
-    dimensionComboBox_->addItem("Triangular Mesh");
-    dimensionComboBox_->addItem("Tetrahedral Mesh");
-    meshSize_ = new QSpinBox();
-    meshSize_->setPrefix("Mesh size: ");
-    meshSize_->setMinimum(1);
-    meshSize_->setValue(10);
-    auto generateButton = new QPushButton("Generate Mesh");
-
-    // Vertex selection
-    QLabel* labelVertex = new QLabel("Pick constraint vertices");
-    pickButton_ = new QPushButton("Select mode");
-    pickButton_->setCheckable(true);
-    auto generationLabel = new QLabel("Generate base mesh");
-    auto clearButton = new QPushButton("Clear vertices");
-    showQualityCheckBox_ = new QCheckBox("Show quality");
-    showQualityCheckBox_->setChecked(true);
-
-    // Vertext displacement
-    QLabel* labelDisplacement = new QLabel("Displacement values for\nconstrained vertices");
-    xValue_ = new QDoubleSpinBox();
-    xValue_->setPrefix("x: ");
-    xValue_->setSingleStep(0.01);
-    xValue_->setRange(-1.0, 1.0);
-    xValue_->setValue(.05);
-    yValue_ = new QDoubleSpinBox();
-    yValue_->setPrefix("y: ");
-    yValue_->setValue(0.0);
-    yValue_->setSingleStep(0.01);
-    yValue_->setRange(-1.0, 1.0);
-    zValue_ = new QDoubleSpinBox();
-    zValue_->setPrefix("z: ");
-    zValue_->setValue(0.0);
-    zValue_->setSingleStep(0.01);
-    zValue_->setRange(-1.0, 1.0);
-
-    displaceButton_ = new QPushButton("Displace vertices");
-
-
-    // Layout
-    QGridLayout* grid = new QGridLayout();
-    grid->addWidget(generationLabel, 0,0);
-    grid->addWidget(dimensionComboBox_, 1,0);
-    grid->addWidget(meshSize_, 2,0);
-    grid->addWidget(generateButton, 2,2);
-    grid->addWidget(labelVertex, 3, 0);
-    grid->addWidget(showQualityCheckBox_, 4,0);
-    grid->addWidget(pickButton_, 5, 0);
-    grid->addWidget(clearButton,5,2);
-    grid->addWidget(labelDisplacement, 6,0);
-    grid->addWidget(xValue_, 7,0);
-    grid->addWidget(yValue_, 7,1);
-    grid->addWidget(zValue_, 7,2);
-    grid->addWidget(displaceButton_, 8,2);
-    tool_->setLayout(grid);
-
     // Connections
-    connect(generateButton, SIGNAL(clicked()), this, SLOT(slot_generate_base_mesh()));
-    connect(pickButton_, SIGNAL(clicked()), this, SLOT(slot_show_constraint_vertex()));
-    connect(displaceButton_,  SIGNAL(clicked()), this, SLOT(slot_displace_constraint_vertex()));
-    connect(showQualityCheckBox_, SIGNAL(toggled(bool)), this, SLOT(slot_show_quality()));
-    connect(clearButton, SIGNAL(clicked()), this, SLOT(slot_clear_constraints()));
+    connect(tool_->generateButton, SIGNAL(clicked()), this, SLOT(slot_generate_base_mesh()));
+    connect(tool_->selectButton, SIGNAL(clicked()), this, SLOT(slot_show_constraint_vertex()));
+    connect(tool_->displaceButton,  SIGNAL(clicked()), this, SLOT(slot_displace_constraint_vertex()));
+    connect(tool_->showQualityCheckbox, SIGNAL(toggled(bool)), this, SLOT(slot_show_quality()));
+    connect(tool_->clearButton, SIGNAL(clicked()), this, SLOT(slot_clear_constraints()));
 
-    // Arbitrary id for constraint vertex
-    constraint_vhs_[51] = 51;
 
     // Add the Toolbox
     emit addToolbox("Master", tool_);
 }
 
 void MasterPlugin::pluginsInitialized(){
+    // Arbitrary id for constraint vertex
+    constraint_vhs_[51] = 51;
     slot_generate_base_mesh();
+    slot_show_quality();
+    slot_show_constraint_vertex();
     emit addPickMode("Pick Constraint");
 
 
@@ -151,7 +96,7 @@ void MasterPlugin::slot_show_quality(){
         auto trimesh = tri_obj->mesh();
 
 
-        if(showQualityCheckBox_->isChecked()){
+        if(tool_->showQualityCheckbox->isChecked()){
             Highlight::highlight_triangles(*trimesh);
         }else{
             for(auto fh: trimesh->faces()){
@@ -172,7 +117,7 @@ void MasterPlugin::slot_show_quality(){
 }
 
 void MasterPlugin::slot_show_constraint_vertex(){
-    if(pickButton_->isChecked()) {
+    if(tool_->selectButton->isChecked()) {
         // Picking mode of our plugin shall be activated
         // set OpenFlipper's action mode to picking
         PluginFunctions::actionMode( Viewer::PickingMode );
@@ -207,7 +152,7 @@ void MasterPlugin::slot_show_constraint_vertex(){
 }
 
 void MasterPlugin::slot_displace_constraint_vertex(){
-    ACG::Vec3d displacement(xValue_->value(), yValue_->value(), zValue_->value());
+    ACG::Vec3d displacement(tool_->displacementX->value(), tool_->displacementY->value(), tool_->displacementZ->value());
     for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
          o_it != PluginFunctions::objectsEnd(); ++o_it) {
         auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
@@ -233,7 +178,7 @@ void MasterPlugin::slot_displace_constraint_vertex(){
         for(auto vh: constraint_vhs_)
             trimesh->set_color(trimesh->vertex_handle(vh.first), ACG::Vec4f(1,0,0,1));
 
-        if(showQualityCheckBox_->isChecked())
+        if(tool_->showQualityCheckbox->isChecked())
             Highlight::highlight_triangles(*trimesh);
 
         emit updatedObject(tri_obj->id(), UPDATE_ALL);
@@ -243,9 +188,9 @@ void MasterPlugin::slot_displace_constraint_vertex(){
 }
 
 void MasterPlugin::slot_generate_base_mesh(){
-    std::cout << "Generating a " << meshSize_->value() << "x" << meshSize_->value() << " "
-              <<dimensionComboBox_->currentText().toStdString() << std::endl;
-    switch (dimensionComboBox_->currentIndex()) {
+    std::cout << "Generating a " << tool_->meshDimension->value() << "x" << tool_->meshDimension->value() << " "
+              <<tool_->meshType->currentText().toStdString() << std::endl;
+    switch (tool_->meshType->currentIndex()) {
     case 0:
         generate_triangular_mesh();
         break;
@@ -272,8 +217,8 @@ void MasterPlugin::generate_triangular_mesh(){
 
     auto mesh = mesh_obj->mesh();
 
-    for (int i = 0; i < meshSize_->value()+1; ++i) {
-       for (int j = 0; j < meshSize_->value()+1; ++j) {
+    for (int i = 0; i < tool_->meshDimension->value()+1; ++i) {
+       for (int j = 0; j < tool_->meshDimension->value()+1; ++j) {
            ACG::Vec3d p(-1 + 0.2*i, -1 + 0.2*j, 0);
            vhandle[count] = mesh->add_vertex(p);
            mesh->set_color(vhandle[count++], ACG::Vec4f(1,1,1,0));
@@ -281,14 +226,14 @@ void MasterPlugin::generate_triangular_mesh(){
     }
 
     // Create faces
-    for (int i = 0; i < meshSize_->value(); ++i) {
-       for (int j = 0; j < meshSize_->value(); ++j) {
+    for (int i = 0; i < tool_->meshDimension->value(); ++i) {
+       for (int j = 0; j < tool_->meshDimension->value(); ++j) {
            // First triangle
-           CustomMesh::FaceHandle fh1 = mesh->add_face(vhandle[i*(meshSize_->value()+1)+j],
-                   vhandle[i*(meshSize_->value()+1)+j+1], vhandle[(i+1)*(meshSize_->value()+1)+j+1]);
+           CustomMesh::FaceHandle fh1 = mesh->add_face(vhandle[i*(tool_->meshDimension->value()+1)+j],
+                   vhandle[i*(tool_->meshDimension->value()+1)+j+1], vhandle[(i+1)*(tool_->meshDimension->value()+1)+j+1]);
            // Second triangle
-           CustomMesh::FaceHandle fh2 = mesh->add_face(vhandle[(i+1)*(meshSize_->value()+1)+j+1],
-                   vhandle[(i+1)*(meshSize_->value()+1)+j], vhandle[i*(meshSize_->value()+1)+j]);
+           CustomMesh::FaceHandle fh2 = mesh->add_face(vhandle[(i+1)*(tool_->meshDimension->value()+1)+j+1],
+                   vhandle[(i+1)*(tool_->meshDimension->value()+1)+j], vhandle[i*(tool_->meshDimension->value()+1)+j]);
            mesh->set_color(fh1, ACG::Vec4f(1,1,1,1));
            mesh->set_color(fh2, ACG::Vec4f(1,1,1,1));
        }

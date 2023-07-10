@@ -18,6 +18,7 @@ void MasterPlugin::initializePlugin()
     connect(tool_->displaceButton,  SIGNAL(clicked()), this, SLOT(slot_displace_constraint_vertex()));
     connect(tool_->showQualityCheckbox, SIGNAL(toggled(bool)), this, SLOT(slot_show_quality()));
     connect(tool_->clearButton, SIGNAL(clicked()), this, SLOT(slot_clear_constraints()));
+    connect(tool_->beginExpButton, SIGNAL(clicked()), this, SLOT(slot_start_experiment()));
 
 
     // Add the Toolbox
@@ -204,6 +205,51 @@ void MasterPlugin::slot_generate_base_mesh(){
 
 }
 
+void MasterPlugin::slot_start_experiment(){
+    for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
+         o_it != PluginFunctions::objectsEnd(); ++o_it) {
+        auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
+        auto *trimesh = tri_obj->mesh();
+
+        int timesteps = tool_->timestepsSpinBox->value();
+        double pause = tool_->pauseSpinBox->value();
+        std::cout << "Selected experiment: " << tool_->experiment2D->currentText().toStdString() << std::endl;
+        if(tool_->experiment_tabs->currentIndex() == 0){
+            for (int i = 0; i < timesteps; ++i) {
+                /* indices 2D :
+                 * 0: Bend
+                 * 1: Compress
+                 * 2: Stretch
+                */
+                switch (tool_->experiment2D->currentIndex()) {
+                    case 0:
+                        Experiments::bend2D(trimesh_, constraint_vhs_, timesteps, pause);
+                        break;
+                    case 1:
+                        Experiments::compress2D(trimesh_, constraint_vhs_, timesteps, pause);
+                        break;
+                    case 2:
+                        Experiments::stretch2D(trimesh_, constraint_vhs_, timesteps, pause);
+                        break;
+                    default:
+                        break;
+                }
+
+            }
+
+        }
+        std::cout << "Experiment ended" << std::endl;
+        *trimesh = trimesh_;
+        trimesh->garbage_collection();
+
+        if(tool_->showQualityCheckbox->isChecked())
+            Highlight::highlight_triangles(*trimesh);
+        emit updatedObject(tri_obj->id(), UPDATE_ALL);
+
+    }
+}
+
+// -------------------- Mesh generation ---------------------------
 void MasterPlugin::generate_triangular_mesh(){
 
     int mesh_obj_id;

@@ -21,6 +21,7 @@
 #include "MainLoop.hh"
 #include "MasterToolbar.hh"
 #include "Highlight.hh"
+#include "Experiments.hh"
 
 class MasterPlugin : public QObject, BaseInterface, ToolboxInterface, LoggingInterface, LoadSaveInterface, MouseInterface, PickingInterface
 {
@@ -65,6 +66,7 @@ private slots:
     void slot_generate_base_mesh();
     void slot_show_quality();
     void slot_clear_constraints();
+    void slot_start_experiment();
 
 
 public :
@@ -75,7 +77,6 @@ public :
   
   QString description() { return QString("Plugin used for my thesis !"); };
   
-
 private:
     typedef OpenMesh::TriMesh_ArrayKernelT<> CustomMesh;
     typedef OpenVolumeMesh::GeometricPolyhedralMeshV3f MyMesh;

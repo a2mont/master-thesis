@@ -1,6 +1,7 @@
 #include "VertexDisplacement.hh"
 
-void VertexDisplacement::displace(TriMesh& _mesh, const ACG::Vec3d _displacement, const std::map<int,int> _constraint_vhs, const bool _verbose){
+void VertexDisplacement::displace(TriMesh& _mesh, const ACG::Vec3d _displacement,
+                                  const std::map<int,int> _constraint_vhs, const bool _verbose){
     if(_verbose)
         std::cout << "Displacement: " << _displacement << std::endl;
 

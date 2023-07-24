@@ -290,11 +290,6 @@
                 <widget class="QComboBox" name="experiment2D">
                  <item>
                   <property name="text">
-                   <string>Bend</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
                    <string>Compress</string>
                   </property>
                  </item>
@@ -337,6 +332,16 @@
             <string>Settings</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_7">
+            <item row="1" column="0">
+             <widget class="QPushButton" name="beginExpButton">
+              <property name="text">
+               <string>Begin</string>
+              </property>
+              <property name="checkable">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
             <item row="0" column="0">
              <layout class="QGridLayout" name="gridLayout_9">
               <item row="0" column="3">
@@ -395,13 +400,13 @@
               </item>
              </layout>
             </item>
-            <item row="1" column="0">
-             <widget class="QPushButton" name="beginExpButton">
-              <property name="text">
-               <string>Begin</string>
+            <item row="2" column="0">
+             <widget class="QPushButton" name="nextButton">
+              <property name="enabled">
+               <bool>false</bool>
               </property>
-              <property name="checkable">
-               <bool>true</bool>
+              <property name="text">
+               <string>Next</string>
               </property>
              </widget>
             </item>

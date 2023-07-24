@@ -6,13 +6,14 @@
 #include "VertexDisplacement.hh"
 #include "QualityEvaluation.hh"
 #include "Smoothing.hh"
+#include "Logger.hh"
 #include "eigen3/Eigen/Dense"
 
 class MainLoop
 {
 
 public:
-    MainLoop(TriMesh& _mesh, double _q_min, std::map<int,int>& _constraint_vhs) :
+    MainLoop(TriMesh& _mesh, double _q_min, std::map<int,int>& _constraint_vhs, const bool _logs = false) :
         mesh_(_mesh),
         constraint_vhs_(_constraint_vhs),
         q_min_(_q_min)
@@ -32,6 +33,8 @@ public:
         for(auto vh: mesh_.vertices()){
             mesh_.property(deleted_border_, vh) = false;
         }
+        logger_= new Logger(LOGS);
+
     }
     ~MainLoop(){
         mesh_.remove_property(face_visited_);
@@ -55,7 +58,7 @@ public:
 
 
 public:
-    void loop(ACG::Vec3d _displacement, bool _verbose= false, int _max_iter=1);
+    void loop(bool _verbose= false, int _max_iter=1);
 private:
     void static reset_queue(PriorityQueue& _queue);
 
@@ -73,8 +76,6 @@ private:
 private:
     TriMesh& mesh_;
 
-    // used in insertion pass
-
     // true means the circumcircle contains the new vertex p
     OpenMesh::FPropHandleT<bool> face_visited_;
     // true means the halfedge is at the border of the cavity
@@ -84,9 +85,13 @@ private:
 
     PriorityQueue quality_queue_;
 
+    Logger *logger_;
+
     std::map<int,int>& constraint_vhs_;
 
     const double q_min_;
+    const std::string LOGS = "../../../../Plugin-Master/logs/quality_logs.csv";
+
 };
 
 #endif // OPENFLIPPER_MAINLOOP_HH

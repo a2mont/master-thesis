@@ -13,6 +13,7 @@
 #include <ACG/Utils/HaltonColors.hh>
 #include <ACG/Scenegraph/LineNode.hh>
 
+#include <unistd.h>
 #include <ObjectTypes/TriangleMesh/TriangleMesh.hh>
 #include <OpenVolumeMesh/Geometry/VectorT.hh>
 #include <OpenVolumeMesh/Mesh/PolyhedralMesh.hh>
@@ -67,6 +68,7 @@ private slots:
     void slot_show_quality();
     void slot_clear_constraints();
     void slot_start_experiment();
+    void slot_experiment_loop();
 
 
 public :
@@ -90,9 +92,15 @@ private:
 
     const double q_min_ = 0.5;
 
-    TriMesh trimesh_;
+    int timesteps_ = 0;
+    int t_ = 0;
+    TriMesh mesh_;
     TetrahedralMesh tetmesh_;
+    Experiment *experiment_;
+
+
     void generate_triangular_mesh();
     void generate_tet_mesh();
+    void highlight_constraints_vertices(TriMesh *_trimesh);
 };
 #endif

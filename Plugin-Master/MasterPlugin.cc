@@ -19,6 +19,7 @@ void MasterPlugin::initializePlugin()
     connect(tool_->showQualityCheckbox, SIGNAL(toggled(bool)), this, SLOT(slot_show_quality()));
     connect(tool_->clearButton, SIGNAL(clicked()), this, SLOT(slot_clear_constraints()));
     connect(tool_->beginExpButton, SIGNAL(clicked()), this, SLOT(slot_start_experiment()));
+    connect(tool_->nextButton, SIGNAL(clicked()), this, SLOT(slot_experiment_loop()));
 
 
     // Add the Toolbox
@@ -27,7 +28,7 @@ void MasterPlugin::initializePlugin()
 
 void MasterPlugin::pluginsInitialized(){
     // Arbitrary id for constraint vertex
-    constraint_vhs_[51] = 51;
+//    constraint_vhs_[120] = 120;
     slot_generate_base_mesh();
     slot_show_quality();
     slot_show_constraint_vertex();
@@ -135,10 +136,8 @@ void MasterPlugin::slot_show_constraint_vertex(){
         auto trimesh = tri_obj->mesh();
 
         tri_obj->materialNode()->set_point_size(12);
-        for(auto vh: trimesh->vertices())
-            trimesh->set_color(vh, ACG::Vec4f(1,1,1,0));
-        for(auto vh: constraint_vhs_)
-            trimesh->set_color(trimesh->vertex_handle(vh.first), ACG::Vec4f(1,0,0,1));
+
+        highlight_constraints_vertices(trimesh);
 
         tri_obj->meshNode()->drawMode(
                     ACG::SceneGraph::DrawModes::WIREFRAME
@@ -169,25 +168,123 @@ void MasterPlugin::slot_displace_constraint_vertex(){
         tri_obj->materialNode()->enable_alpha_test(0.8);
 
 
-        MainLoop loop(trimesh_, q_min_, constraint_vhs_);
+        VertexDisplacement::displace(mesh_, displacement, constraint_vhs_, false);
 
-        loop.loop(displacement, false);
+        MainLoop loop(mesh_, q_min_, constraint_vhs_, true);
+
+        loop.loop(false);
+
         std::cout << "Loop ended" << std::endl;
-        *trimesh = trimesh_;
-        trimesh->garbage_collection();
 
-        for(auto vh: constraint_vhs_)
-            trimesh->set_color(trimesh->vertex_handle(vh.first), ACG::Vec4f(1,0,0,1));
+        std::cout << "Constraint vertices" << std::endl;
+        for(auto v: constraint_vhs_){
+            std::cout << v.first <<"," ;
+        }
+        std::cout << "\nTotal: " << constraint_vhs_.size() << std::endl;
+        TriMesh newMesh = *trimesh;
+        newMesh.clear();
+        newMesh = mesh_;
+        *trimesh = newMesh;
+        trimesh->garbage_collection();
+//        highlight_constraints_vertices(trimesh);
+
+        if(tool_->showQualityCheckbox->isChecked())
+            Highlight::highlight_triangles(*trimesh);
+        emit updatedObject(tri_obj->id(), UPDATE_ALL);
+    }
+
+}
+
+
+void MasterPlugin::slot_start_experiment(){
+    t_ = 0;
+    tool_->nextButton->setEnabled(true);
+    tool_->beginExpButton->setEnabled(false);
+    tool_->experiment_tabs->setEnabled(false);
+    tool_->timestepsSpinBox->setEnabled(false);
+    tool_->experiment2D->setEnabled(false);
+    tool_->experiment3D->setEnabled(false);
+    for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
+         o_it != PluginFunctions::objectsEnd(); ++o_it) {
+        auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
+        auto *trimesh = tri_obj->mesh();
+
+        timesteps_ = tool_->timestepsSpinBox->value();
+
+        std::map<int,ACG::Vec3d> basePoints;
+
+        for(auto vh: mesh_.vertices()){
+            basePoints[vh.idx()] = mesh_.point(vh);
+        }
+        experiment_ = new Experiment(mesh_, basePoints, q_min_, constraint_vhs_);
+        std::cout << "Selected experiment: " << tool_->experiment2D->currentText().toStdString() << std::endl;
+
+        slot_experiment_loop();
+    }
+}
+
+void MasterPlugin::slot_experiment_loop(){
+    for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
+         o_it != PluginFunctions::objectsEnd(); ++o_it) {
+        auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
+        auto *trimesh = tri_obj->mesh();
+
+        /* indices 2D :
+         * 0: Compress
+         * 1: Stretch
+        */
+        switch (tool_->experiment2D->currentIndex()) {
+            case 0:
+                experiment_->compress2D(timesteps_, ++t_);
+                break;
+            case 1:
+                experiment_->stretch2D(timesteps_, ++t_);
+                break;
+            default:
+                break;
+        }
+
+        TriMesh newMesh = *trimesh;
+        newMesh.clear();
+        newMesh = mesh_;
+        *trimesh = newMesh;
+        trimesh->garbage_collection();
 
         if(tool_->showQualityCheckbox->isChecked())
             Highlight::highlight_triangles(*trimesh);
 
         emit updatedObject(tri_obj->id(), UPDATE_ALL);
 
+        // reset when done with experiment
+        if(t_ >= timesteps_){
+            std::cout << "Experiment ended" << std::endl;
+            tool_->nextButton->setEnabled(false);
+            tool_->beginExpButton->setEnabled(true);
+            tool_->experiment_tabs->setEnabled(true);
+            tool_->timestepsSpinBox->setEnabled(true);
+            tool_->experiment2D->setEnabled(true);
+            tool_->experiment3D->setEnabled(true);
+        }
     }
+
 
 }
 
+// -------------------- Simple helpers ----------------------------
+void MasterPlugin::highlight_constraints_vertices(TriMesh* _trimesh){
+    for(auto vh: _trimesh->vertices()){
+        if(!_trimesh->status(vh).deleted())
+            _trimesh->set_color(vh, ACG::Vec4f(1,1,1,0));
+    }
+    for(auto vh_id: constraint_vhs_){
+        auto vh = _trimesh->vertex_handle(vh_id.first);
+        if(!_trimesh->status(vh).deleted())
+            _trimesh->set_color(vh, ACG::Vec4f(1,0,0,1));
+    }
+}
+
+
+// -------------------- Mesh generation ---------------------------
 void MasterPlugin::slot_generate_base_mesh(){
     std::cout << "Generating a " << tool_->meshDimension->value() << "x" << tool_->meshDimension->value() << " "
               <<tool_->meshType->currentText().toStdString() << std::endl;
@@ -204,52 +301,6 @@ void MasterPlugin::slot_generate_base_mesh(){
     }
 
 }
-
-void MasterPlugin::slot_start_experiment(){
-    for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
-         o_it != PluginFunctions::objectsEnd(); ++o_it) {
-        auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
-        auto *trimesh = tri_obj->mesh();
-
-        int timesteps = tool_->timestepsSpinBox->value();
-        double pause = tool_->pauseSpinBox->value();
-        std::cout << "Selected experiment: " << tool_->experiment2D->currentText().toStdString() << std::endl;
-        if(tool_->experiment_tabs->currentIndex() == 0){
-            for (int i = 0; i < timesteps; ++i) {
-                /* indices 2D :
-                 * 0: Bend
-                 * 1: Compress
-                 * 2: Stretch
-                */
-                switch (tool_->experiment2D->currentIndex()) {
-                    case 0:
-                        Experiments::bend2D(trimesh_, constraint_vhs_, timesteps, pause);
-                        break;
-                    case 1:
-                        Experiments::compress2D(trimesh_, constraint_vhs_, timesteps, pause);
-                        break;
-                    case 2:
-                        Experiments::stretch2D(trimesh_, constraint_vhs_, timesteps, pause);
-                        break;
-                    default:
-                        break;
-                }
-
-            }
-
-        }
-        std::cout << "Experiment ended" << std::endl;
-        *trimesh = trimesh_;
-        trimesh->garbage_collection();
-
-        if(tool_->showQualityCheckbox->isChecked())
-            Highlight::highlight_triangles(*trimesh);
-        emit updatedObject(tri_obj->id(), UPDATE_ALL);
-
-    }
-}
-
-// -------------------- Mesh generation ---------------------------
 void MasterPlugin::generate_triangular_mesh(){
 
     int mesh_obj_id;
@@ -265,7 +316,7 @@ void MasterPlugin::generate_triangular_mesh(){
 
     for (int i = 0; i < tool_->meshDimension->value()+1; ++i) {
        for (int j = 0; j < tool_->meshDimension->value()+1; ++j) {
-           ACG::Vec3d p(-1 + 0.2*i, -1 + 0.2*j, 0);
+           ACG::Vec3d p(0.2*i, 0.2*j, 0);
            vhandle[count] = mesh->add_vertex(p);
            mesh->set_color(vhandle[count++], ACG::Vec4f(1,1,1,0));
        }
@@ -293,7 +344,13 @@ void MasterPlugin::generate_triangular_mesh(){
     mesh_obj->materialNode()->enable_alpha_test(0.8);
     emit updatedObject(mesh_obj->id(), UPDATE_ALL);
 
-    trimesh_ = *mesh;
+    mesh_ = *mesh;
+
+
+//  Request required status flags
+    mesh_.request_vertex_status();
+    mesh_.request_edge_status();
+    mesh_.request_face_status();
 }
 
 

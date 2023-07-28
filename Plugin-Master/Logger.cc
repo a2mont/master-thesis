@@ -7,3 +7,10 @@ void Logger::logQuality(double _quality){
     file_.close();
 }
 
+void Logger::nextLine(){
+    if(!file_.is_open())
+        file_.open(filename_, std::ofstream::out | std::ios::app);
+    file_ << "\n";
+    file_.close();
+}
+

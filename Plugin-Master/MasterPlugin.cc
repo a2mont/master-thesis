@@ -172,7 +172,7 @@ void MasterPlugin::slot_displace_constraint_vertex(){
 
         MainLoop loop(mesh_, q_min_, constraint_vhs_, true);
 
-        loop.loop(false);
+        loop.loop();
 
         std::cout << "Loop ended" << std::endl;
 
@@ -209,6 +209,7 @@ void MasterPlugin::slot_start_experiment(){
         auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
         auto *trimesh = tri_obj->mesh();
 
+        tri_obj->materialNode()->set_point_size(3.0);
         timesteps_ = tool_->timestepsSpinBox->value();
 
         std::map<int,ACG::Vec3d> basePoints;

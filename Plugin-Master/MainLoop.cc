@@ -1,13 +1,10 @@
 #include "MainLoop.hh"
 
-void MainLoop::loop(bool _verbose,int _max_iter ){
+void MainLoop::loop(int _max_iter){
     for(int i=0; i < _max_iter; ++i){
         PriorityQueue worstTriangles;
 
-        for(auto fh: mesh_.faces()){
-            double quality = QualityEvaluation::evaluate(fh, mesh_,_verbose);
-            quality_queue_.push(Triangle(fh, quality));
-        }
+        computeQuality();
 
         Triangle currentWorst = quality_queue_.top();
         while(currentWorst.quality_ < q_min_){
@@ -18,17 +15,33 @@ void MainLoop::loop(bool _verbose,int _max_iter ){
 
         if(worstTriangles.empty()){
             std::cout << "All triangles are of good enough quality\nWorst triangle: " << currentWorst.toString() << std::endl;
-            logger_->logQuality(currentWorst.quality_);
         }
         else{
             std::cout << worstTriangles.size() << " triangles of bad quality"
                       << "\nWorst triangle: " << worstTriangles.top().toString()
                       << std::endl;
-            logger_->logQuality(worstTriangles.top().quality_);
+//            if(includeLogs_)
+//                log();
             improve_mesh(worstTriangles);
-            logger_->logQuality(worstTriangles.top().quality_);
         }
+        if(includeLogs_)
+            log(true);
         reset_queue(quality_queue_);
+    }
+}
+
+void MainLoop::computeQuality(){
+    reset_queue(quality_queue_);
+    for(auto fh: mesh_.faces()){
+        double quality = QualityEvaluation::evaluate(fh, mesh_,false);
+        quality_queue_.push(Triangle(fh, quality));
+    }
+}
+void MainLoop::log(bool _endOfLine){
+    computeQuality();
+    logger_->logQuality(quality_queue_.top().quality_);
+    if(_endOfLine){
+        logger_->nextLine();
     }
 }
 
@@ -60,26 +73,43 @@ void MainLoop::improve_triangle(Triangle _t){
         changed = false;
         do {
             // A <- topological_pass(A,M)
-            changed = topologial_pass(&A);
-            if(A.top().quality_ >= q_min_)
+//            changed = topologial_pass(&A);
+            if(A.top().quality_ >= q_min_){
+                if(includeLogs_)
+                    log(true);
                 return;
+            }
         } while (changed && maxIter-- > 0);
 
+        if(includeLogs_)
+            log();
         // A <- edge_contraction_pass(A,M)
-        edge_contraction_pass(&A);
-        if(A.top().quality_ >= q_min_)
+//        edge_contraction_pass(&A);
+        if(A.top().quality_ >= q_min_){
+            if(includeLogs_)
+                log(true);
             return;
-
+        }
+        if(includeLogs_)
+            log();
         // A <- insertion_pass(A,M)
-        insertion_pass(&A);
-        if(A.top().quality_ >= q_min_)
+//        insertion_pass(&A);
+        if(A.top().quality_ >= q_min_){
+            if(includeLogs_)
+                log(true);
             return;
-
+        }
+        if(includeLogs_)
+            log();
         // smoothing_pass()
-        smoothing_pass(&A, 1);
-        if(A.top().quality_ >= q_min_ || A.empty())
+//        smoothing_pass(&A, 1);
+        if(A.top().quality_ >= q_min_ || A.empty()){
+            if(includeLogs_)
+                log(true);
             return;
-
+        }
+        if(includeLogs_)
+            log();
     }
 
 }

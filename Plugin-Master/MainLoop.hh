@@ -16,6 +16,7 @@ public:
     MainLoop(TriMesh& _mesh, double _q_min, std::map<int,int>& _constraint_vhs, const bool _logs = false) :
         mesh_(_mesh),
         constraint_vhs_(_constraint_vhs),
+        includeLogs_(_logs),
         q_min_(_q_min)
     {
         if(!mesh_.get_property_handle(face_visited_, "face visited"))
@@ -33,7 +34,8 @@ public:
         for(auto vh: mesh_.vertices()){
             mesh_.property(deleted_border_, vh) = false;
         }
-        logger_= new Logger(LOGS);
+        if(_logs)
+            logger_= new Logger(LOGS);
 
     }
     ~MainLoop(){
@@ -58,7 +60,7 @@ public:
 
 
 public:
-    void loop(bool _verbose= false, int _max_iter=1);
+    void loop(int _max_iter=1);
 private:
     void static reset_queue(PriorityQueue& _queue);
 
@@ -72,6 +74,8 @@ private:
 
     void find_faces_with_p(std::vector<OpenMesh::SmartFaceHandle> &_list, OpenMesh::SmartFaceHandle _fh, const Point _p);
     bool contains_p(OpenMesh::SmartFaceHandle _fh, const Point _p);
+    void log(bool _endOfLine = false);
+    void computeQuality();
 
 private:
     TriMesh& mesh_;
@@ -89,8 +93,9 @@ private:
 
     std::map<int,int>& constraint_vhs_;
 
+    const bool includeLogs_;
     const double q_min_;
-    const std::string LOGS = "../../../../Plugin-Master/logs/quality_logs.csv";
+    const std::string LOGS = "../../../../Plugin-Master/logs/quality_logs_nothing.csv";
 
 };
 

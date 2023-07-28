@@ -90,7 +90,7 @@ private:
     //store selected vertices
     std::map<int,int> constraint_vhs_;
 
-    const double q_min_ = 0.5;
+    const double q_min_ = 0.65;
 
     int timesteps_ = 0;
     int t_ = 0;

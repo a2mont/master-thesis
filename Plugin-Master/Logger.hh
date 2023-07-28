@@ -12,7 +12,7 @@ public:
         std::cout << "text" << std::endl;
         if(file_){
             std::cout << "File opened" << std::endl;
-            file_ << "Quality \n";
+            file_ << "Quality\n";
             file_.close();
         }
     }
@@ -23,6 +23,7 @@ public:
 
 
     void logQuality(double _quality);
+    void nextLine();
 private:
     std::fstream file_;
     std::string filename_;

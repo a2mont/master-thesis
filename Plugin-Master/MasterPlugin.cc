@@ -30,6 +30,7 @@ void MasterPlugin::pluginsInitialized(){
     // Arbitrary id for constraint vertex
 //    constraint_vhs_[120] = 120;
     slot_generate_base_mesh();
+    worldMesh_ = gen_world_mesh();
     slot_show_quality();
     slot_show_constraint_vertex();
     emit addPickMode("Pick Constraint");
@@ -170,7 +171,7 @@ void MasterPlugin::slot_displace_constraint_vertex(){
 
         VertexDisplacement::displace(mesh_, displacement, constraint_vhs_, false);
 
-        MainLoop loop(mesh_, q_min_, constraint_vhs_, true);
+        MainLoop loop(mesh_, worldMesh_, q_min_, constraint_vhs_, true);
 
         loop.loop();
 
@@ -217,7 +218,7 @@ void MasterPlugin::slot_start_experiment(){
         for(auto vh: mesh_.vertices()){
             basePoints[vh.idx()] = mesh_.point(vh);
         }
-        experiment_ = new Experiment(mesh_, basePoints, q_min_, constraint_vhs_);
+        experiment_ = new Experiment(mesh_, worldMesh_,basePoints, q_min_, constraint_vhs_);
         std::cout << "Selected experiment: " << tool_->experiment2D->currentText().toStdString() << std::endl;
 
         slot_experiment_loop();
@@ -312,11 +313,12 @@ void MasterPlugin::generate_triangular_mesh(){
     // Create vertices
     CustomMesh::VertexHandle vhandle[121];
     int count = 0;
+    int dimension = tool_->meshDimension->value();
 
     auto mesh = mesh_obj->mesh();
 
-    for (int i = 0; i < tool_->meshDimension->value()+1; ++i) {
-       for (int j = 0; j < tool_->meshDimension->value()+1; ++j) {
+    for (int i = 0; i < dimension+1; ++i) {
+       for (int j = 0; j < dimension+1; ++j) {
            ACG::Vec3d p(0.2*i, 0.2*j, 0);
            vhandle[count] = mesh->add_vertex(p);
            mesh->set_color(vhandle[count++], ACG::Vec4f(1,1,1,0));
@@ -324,14 +326,18 @@ void MasterPlugin::generate_triangular_mesh(){
     }
 
     // Create faces
-    for (int i = 0; i < tool_->meshDimension->value(); ++i) {
-       for (int j = 0; j < tool_->meshDimension->value(); ++j) {
+    for (int i = 0; i < dimension; ++i) {
+       for (int j = 0; j < dimension; ++j) {
            // First triangle
-           CustomMesh::FaceHandle fh1 = mesh->add_face(vhandle[i*(tool_->meshDimension->value()+1)+j],
-                   vhandle[i*(tool_->meshDimension->value()+1)+j+1], vhandle[(i+1)*(tool_->meshDimension->value()+1)+j+1]);
+           CustomMesh::FaceHandle fh1 = mesh->add_face(
+                        vhandle[i*(dimension+1)+j],
+                        vhandle[i*(dimension+1)+j+1],
+                        vhandle[(i+1)*(dimension+1)+j+1]);
            // Second triangle
-           CustomMesh::FaceHandle fh2 = mesh->add_face(vhandle[(i+1)*(tool_->meshDimension->value()+1)+j+1],
-                   vhandle[(i+1)*(tool_->meshDimension->value()+1)+j], vhandle[i*(tool_->meshDimension->value()+1)+j]);
+           CustomMesh::FaceHandle fh2 = mesh->add_face(
+                        vhandle[(i+1)*(dimension+1)+j+1],
+                        vhandle[(i+1)*(dimension+1)+j],
+                        vhandle[i*(dimension+1)+j]);
            mesh->set_color(fh1, ACG::Vec4f(1,1,1,1));
            mesh->set_color(fh2, ACG::Vec4f(1,1,1,1));
        }
@@ -343,17 +349,46 @@ void MasterPlugin::generate_triangular_mesh(){
               | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED);
 
     mesh_obj->materialNode()->enable_alpha_test(0.8);
+
+    //  Request required status flags
+    mesh->request_vertex_status();
+    mesh->request_edge_status();
+    mesh->request_face_status();
     emit updatedObject(mesh_obj->id(), UPDATE_ALL);
 
     mesh_ = *mesh;
 
-
-//  Request required status flags
-    mesh_.request_vertex_status();
-    mesh_.request_edge_status();
-    mesh_.request_face_status();
 }
+TriMesh MasterPlugin::gen_world_mesh(){
+    CustomMesh worldMesh;
+    CustomMesh::VertexHandle vhandle[121];
+    int count = 0;
+    int dimension = tool_->meshDimension->value();
+    for (int i = 0; i < dimension+1; ++i) {
+       for (int j = 0; j < dimension+1; ++j) {
+           ACG::Vec3d p(0.2*i, 0.2*j, 0);
+           vhandle[count] = worldMesh.add_vertex(p);
+       }
+    }
+    // Create faces
+    for (int i = 0; i < dimension; ++i) {
+       for (int j = 0; j < dimension; ++j) {
+           // First triangle
+           CustomMesh::FaceHandle fh1 = worldMesh.add_face(
+                        worldMesh.vertex_handle(i*(dimension+1)+j),
+                        worldMesh.vertex_handle(i*(dimension+1)+j+1),
+                        worldMesh.vertex_handle((i+1)*(dimension+1)+j+1));
+           // Second triangle
+           CustomMesh::FaceHandle fh2 = worldMesh.add_face(
+                        worldMesh.vertex_handle((i+1)*(dimension+1)+j+1),
+                        worldMesh.vertex_handle((i+1)*(dimension+1)+j),
+                        worldMesh.vertex_handle(i*(dimension+1)+j));
+       }
+    }
 
+    std::cout << "World:"<< worldMesh.n_faces() << std::endl;
+    return worldMesh;
+}
 
 void MasterPlugin::generate_tet_mesh(){
 

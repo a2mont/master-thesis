@@ -80,7 +80,7 @@ public :
   QString description() { return QString("Plugin used for my thesis !"); };
   
 private:
-    typedef OpenMesh::TriMesh_ArrayKernelT<> CustomMesh;
+    typedef OpenMesh::TriMesh_ArrayKernelT<OpenMesh::DefaultTraitsDouble> CustomMesh;
     typedef OpenVolumeMesh::GeometricPolyhedralMeshV3f MyMesh;
     // The toolbox widget and the button in it
     MasterToolbar* tool_;
@@ -90,11 +90,12 @@ private:
     //store selected vertices
     std::map<int,int> constraint_vhs_;
 
-    const double q_min_ = 0.65;
+    const double q_min_ = 0.7;
 
     int timesteps_ = 0;
     int t_ = 0;
     TriMesh mesh_;
+    TriMesh worldMesh_;
     TetrahedralMesh tetmesh_;
     Experiment *experiment_;
 
@@ -102,5 +103,6 @@ private:
     void generate_triangular_mesh();
     void generate_tet_mesh();
     void highlight_constraints_vertices(TriMesh *_trimesh);
+    TriMesh gen_world_mesh();
 };
 #endif

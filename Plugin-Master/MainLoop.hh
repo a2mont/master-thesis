@@ -13,8 +13,9 @@ class MainLoop
 {
 
 public:
-    MainLoop(TriMesh& _mesh, double _q_min, std::map<int,int>& _constraint_vhs, const bool _logs = false) :
+    MainLoop(TriMesh& _mesh, TriMesh& _worldMesh, double _q_min, std::map<int,int>& _constraint_vhs, const bool _logs = false) :
         mesh_(_mesh),
+        worldSpaceMesh_(_worldMesh),
         constraint_vhs_(_constraint_vhs),
         includeLogs_(_logs),
         q_min_(_q_min)
@@ -34,8 +35,12 @@ public:
         for(auto vh: mesh_.vertices()){
             mesh_.property(deleted_border_, vh) = false;
         }
-        if(_logs)
-            logger_= new Logger(LOGS);
+        if(_logs){
+            logsAddress_ = LOGS_BASE + std::to_string(q_min_).substr(0,4) + LOGS_EXTENSION;
+            std::string logsTimesteps = LOGS_STEP + std::to_string(q_min_).substr(0,4) + LOGS_EXTENSION;
+            logger_= new Logger(logsAddress_, q_min_);
+            timeStepLogger_ = new Logger(logsTimesteps, q_min_);
+        }
 
     }
     ~MainLoop(){
@@ -74,11 +79,12 @@ private:
 
     void find_faces_with_p(std::vector<OpenMesh::SmartFaceHandle> &_list, OpenMesh::SmartFaceHandle _fh, const Point _p);
     bool contains_p(OpenMesh::SmartFaceHandle _fh, const Point _p);
-    void log(bool _endOfLine = false);
+    void log( Logger* _logger, bool _endOfLine = false);
     void computeQuality();
 
 private:
     TriMesh& mesh_;
+    TriMesh& worldSpaceMesh_;
 
     // true means the circumcircle contains the new vertex p
     OpenMesh::FPropHandleT<bool> face_visited_;
@@ -90,12 +96,15 @@ private:
     PriorityQueue quality_queue_;
 
     Logger *logger_;
+    Logger *timeStepLogger_;
 
     std::map<int,int>& constraint_vhs_;
-
+    std::string logsAddress_;
     const bool includeLogs_;
     const double q_min_;
-    const std::string LOGS = "../../../../Plugin-Master/logs/quality_logs_nothing.csv";
+    const std::string LOGS_BASE = "../../../../Plugin-Master/logs/quality_logs_";
+    const std::string LOGS_EXTENSION = ".csv";
+    const std::string LOGS_STEP = "../../../../Plugin-Master/logs/quality_timesteps_";
 
 };
 

@@ -7,12 +7,12 @@
 class Logger
 {
 public:
-    Logger(std::string _filename): filename_(_filename) {
+    Logger(std::string _filename, const double _q_min): filename_(_filename) {
         file_.open(_filename, std::ofstream::out | std::ios::trunc);
-        std::cout << "text" << std::endl;
         if(file_){
             std::cout << "File opened" << std::endl;
-            file_ << "Quality\n";
+            file_ << "Quality Min\n";
+            file_ << _q_min << "\n";
             file_.close();
         }
     }

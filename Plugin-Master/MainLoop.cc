@@ -20,14 +20,16 @@ void MainLoop::loop(int _max_iter){
             std::cout << worstTriangles.size() << " triangles of bad quality"
                       << "\nWorst triangle: " << worstTriangles.top().toString()
                       << std::endl;
-//            if(includeLogs_)
-//                log();
+            if(includeLogs_)
+                log(logger_);
             improve_mesh(worstTriangles);
         }
         if(includeLogs_)
-            log(true);
+            log(logger_, true);
         reset_queue(quality_queue_);
     }
+    log(timeStepLogger_, true);
+
 }
 
 void MainLoop::computeQuality(){
@@ -37,9 +39,9 @@ void MainLoop::computeQuality(){
         quality_queue_.push(Triangle(fh, quality));
     }
 }
-void MainLoop::log(bool _endOfLine){
+void MainLoop::log(Logger* _logger, bool _endOfLine){
     computeQuality();
-    logger_->logQuality(quality_queue_.top().quality_);
+    _logger->logQuality(quality_queue_.top().quality_);
     if(_endOfLine){
         logger_->nextLine();
     }
@@ -73,43 +75,43 @@ void MainLoop::improve_triangle(Triangle _t){
         changed = false;
         do {
             // A <- topological_pass(A,M)
-//            changed = topologial_pass(&A);
+            changed = topologial_pass(&A);
             if(A.top().quality_ >= q_min_){
                 if(includeLogs_)
-                    log(true);
+                    log(logger_,true);
                 return;
             }
         } while (changed && maxIter-- > 0);
 
         if(includeLogs_)
-            log();
+            log(logger_);
         // A <- edge_contraction_pass(A,M)
-//        edge_contraction_pass(&A);
+        edge_contraction_pass(&A);
         if(A.top().quality_ >= q_min_){
             if(includeLogs_)
-                log(true);
+                log(logger_, true);
             return;
         }
         if(includeLogs_)
-            log();
+            log(logger_);
         // A <- insertion_pass(A,M)
-//        insertion_pass(&A);
+        insertion_pass(&A);
         if(A.top().quality_ >= q_min_){
             if(includeLogs_)
-                log(true);
+                log(logger_, true);
             return;
         }
         if(includeLogs_)
-            log();
+            log(logger_);
         // smoothing_pass()
-//        smoothing_pass(&A, 1);
+        smoothing_pass(&A, 1);
         if(A.top().quality_ >= q_min_ || A.empty()){
             if(includeLogs_)
-                log(true);
+                log(logger_, true);
             return;
         }
         if(includeLogs_)
-            log();
+            log(logger_);
     }
 
 }

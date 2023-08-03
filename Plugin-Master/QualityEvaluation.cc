@@ -12,7 +12,7 @@ double QualityEvaluation::evaluate(const OpenMesh::SmartFaceHandle _face, TriMes
         edge_lengths.push_back(_mesh.calc_edge_length(feh));
     }
 
-    area = calculate_area(edge_lengths);
+    area = calculate_area(_mesh, _face);
     double squaredEdgeLength = 0.;
     for(auto edge: edge_lengths){
         squaredEdgeLength += pow(edge,2);
@@ -42,18 +42,17 @@ double QualityEvaluation::evaluate(const OpenMesh::SmartFaceHandle _face, TriMes
 }
 
 
-double QualityEvaluation::calculate_area(std::vector<double> _edge_lengths){
+double QualityEvaluation::calculate_area(TriMesh& _mesh, OpenMesh::SmartFaceHandle _faceHandle){
     double area = 0.;
-    double x1,x2,x3,semi_perimeter,total;
-    x1 = _edge_lengths[0];
-    x2 = _edge_lengths[1];
-    x3 = _edge_lengths[2];
-    semi_perimeter = (x1+x2+x3)/2;
-
-    total = semi_perimeter*(semi_perimeter-x1)*(semi_perimeter-x2)*(semi_perimeter-x3);
-    total = total < 0. ? 0. : total;
-
-    area = sqrt(total);
+    std::vector<ACG::Vec3d> points;
+    ACG::Vec3d v,w;
+    for(auto vh: _faceHandle.vertices()){
+        points.emplace_back(_mesh.point(vh));
+    }
+    v = points[1] - points[0];
+    w = points[2] - points[0];
+    ACG::Vec3d xproduct = w.cross(v);
+    area = xproduct[2]/2;
     return area;
 }
 

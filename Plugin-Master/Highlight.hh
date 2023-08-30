@@ -5,7 +5,6 @@
 #include <ObjectTypes/TriangleMesh/TriangleMesh.hh>
 
 #include "QualityEvaluation.hh"
-#include "MainLoop.hh"
 
 class Highlight
 {

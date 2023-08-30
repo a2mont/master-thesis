@@ -72,7 +72,7 @@ def plot_timesteps(datas):
 def find_files(regex):
     filenames = []
 
-    for _, _, files in os.walk('.'):
+    for _, _, files in os.walk('./2D/'):
         for file in files:
             if regex.match(file):
                 filenames.append(file)
@@ -80,10 +80,11 @@ def find_files(regex):
     print(f'{len(filenames)} files\n{filenames}')
     return filenames
 
-def data_from_files(filenames):
+def data_from_files(filenames, dimension='2D'):
     datas = {}
     for f in filenames:
         idx = 0
+        f = f"./{dimension}/" + f
         with open(f) as file:
             reader = csv.reader(file, delimiter=',')
             name = ''

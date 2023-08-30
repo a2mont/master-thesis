@@ -5,7 +5,6 @@
 #include "OpenFlipper/BasePlugin/PluginFunctions.hh"
 
 
-
 void MasterPlugin::initializePlugin()
 {  
     tool_ = new MasterToolbar();
@@ -28,13 +27,12 @@ void MasterPlugin::initializePlugin()
 
 void MasterPlugin::pluginsInitialized(){
     // Arbitrary id for constraint vertex
-//    constraint_vhs_[120] = 120;
+    constraint_vhs_[100] = 100;
     slot_generate_base_mesh();
-    worldMesh_ = gen_world_mesh();
-    slot_show_quality();
-    slot_show_constraint_vertex();
+//    worldMesh_ = gen_world_mesh();
+//    slot_show_quality();
+//    slot_show_constraint_vertex();
     emit addPickMode("Pick Constraint");
-
 
 }
 
@@ -59,7 +57,6 @@ void MasterPlugin::slotMouseEvent(QMouseEvent* _event) {
                 if (PluginFunctions::getPickedObject(node_idx, obj)) {
                     // is picked object a triangle mesh?
                     TriMeshObject *tri_obj = PluginFunctions::triMeshObject(obj);
-
                     if (tri_obj) {
                         auto vh = tri_obj->mesh()->vertex_handle(target_idx);
                         if (vh == TriMesh::InvalidVertexHandle)
@@ -76,6 +73,27 @@ void MasterPlugin::slotMouseEvent(QMouseEvent* _event) {
                         }
                         std::cout << "\nTotal: " << constraint_vhs_.size() << std::endl;
                         slot_show_constraint_vertex();
+
+                        return;
+                    }
+                    // is picked object a tet mesh?
+                    TetrahedralMeshObject *tet_obj = PluginFunctions::tetrahedralMeshObject(obj);
+                    if (tet_obj) {
+                        auto vh = OpenVolumeMesh::VertexHandle(target_idx);
+                        if (vh == TetrahedralMesh::InvalidVertexHandle)
+                            return;
+
+                        if(constraint_vhs_.count(vh.idx()) == 0)
+                            constraint_vhs_[vh.idx()] = vh.idx();
+                        else
+                            constraint_vhs_.erase(vh.idx());
+
+                        std::cout << "Constraint vertices" << std::endl;
+                        for(auto v: constraint_vhs_){
+                            std::cout << v.first <<"," ;
+                        }
+                        std::cout << "\nTotal: " << constraint_vhs_.size() << std::endl;
+//                        slot_show_constraint_vertex();
 
                         return;
                     }
@@ -150,10 +168,30 @@ void MasterPlugin::slot_show_constraint_vertex(){
 
         emit updatedObject(tri_obj->id(), UPDATE_COLOR);
     }
+    for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TETRAHEDRAL_MESH);
+         o_it != PluginFunctions::objectsEnd(); ++o_it) {
+        auto tet_obj = PluginFunctions::tetrahedralMeshObject(*o_it);
+        auto tetmesh = tet_obj->mesh();
+
+        tet_obj->materialNode()->set_point_size(12);
+
+        tet_obj->meshNode()->drawMode(
+                    ACG::SceneGraph::DrawModes::WIREFRAME
+                  | ACG::SceneGraph::DrawModes::POINTS_COLORED
+                  | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED|
+                    DrawModes::Cells_flat() |
+                    DrawModes::Vertices());
+
+        tet_obj->materialNode()->enable_alpha_test(0.8);
+
+
+        emit updatedObject(tet_obj->id(), UPDATE_COLOR);
+    }
 }
 
 void MasterPlugin::slot_displace_constraint_vertex(){
     ACG::Vec3d displacement(tool_->displacementX->value(), tool_->displacementY->value(), tool_->displacementZ->value());
+    // Tri meshes
     for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
          o_it != PluginFunctions::objectsEnd(); ++o_it) {
         auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
@@ -171,7 +209,7 @@ void MasterPlugin::slot_displace_constraint_vertex(){
 
         VertexDisplacement::displace(mesh_, displacement, constraint_vhs_, false);
 
-        MainLoop loop(mesh_, worldMesh_, q_min_, constraint_vhs_, true);
+        TriangleLoop loop(mesh_, worldMesh_, q_min_, constraint_vhs_);
 
         loop.loop();
 
@@ -187,11 +225,32 @@ void MasterPlugin::slot_displace_constraint_vertex(){
         newMesh = mesh_;
         *trimesh = newMesh;
         trimesh->garbage_collection();
-//        highlight_constraints_vertices(trimesh);
 
         if(tool_->showQualityCheckbox->isChecked())
             Highlight::highlight_triangles(*trimesh);
         emit updatedObject(tri_obj->id(), UPDATE_ALL);
+    }
+    // Tet meshes
+    for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TETRAHEDRAL_MESH);
+         o_it != PluginFunctions::objectsEnd(); ++o_it) {
+        auto *tet_obj = PluginFunctions::tetrahedralMeshObject(*o_it);
+        auto *tetmesh = tet_obj->mesh();
+
+        tet_obj->meshNode()->drawMode(
+                    DrawModes::Cells_flat() |
+                    DrawModes::Vertices());
+
+        VertexDisplacement::displace(tetmesh_, displacement, constraint_vhs_);
+
+        TetLoop loop3d(tetmesh_, q_min_, constraint_vhs_);
+        loop3d.loop();
+
+        std::cout << "Loop ended" << std::endl;
+
+        *tetmesh = tetmesh_;
+//        tetmesh->collect_garbage();
+
+        emit updatedObject(tet_obj->id(), UPDATE_ALL);
     }
 
 }
@@ -203,6 +262,7 @@ void MasterPlugin::slot_start_experiment(){
     tool_->beginExpButton->setEnabled(false);
     tool_->experiment_tabs->setEnabled(false);
     tool_->timestepsSpinBox->setEnabled(false);
+    tool_->qualitySpinBox->setEnabled(false);
     tool_->experiment2D->setEnabled(false);
     tool_->experiment3D->setEnabled(false);
     for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
@@ -212,6 +272,7 @@ void MasterPlugin::slot_start_experiment(){
 
         tri_obj->materialNode()->set_point_size(3.0);
         timesteps_ = tool_->timestepsSpinBox->value();
+        q_min_ = tool_->qualitySpinBox->value();
 
         std::map<int,ACG::Vec3d> basePoints;
 
@@ -292,10 +353,10 @@ void MasterPlugin::slot_generate_base_mesh(){
               <<tool_->meshType->currentText().toStdString() << std::endl;
     switch (tool_->meshType->currentIndex()) {
     case 0:
-        generate_triangular_mesh();
+        generate_tet_mesh();
         break;
     case 1:
-        generate_tet_mesh();
+        generate_triangular_mesh();
         break;
     default:
         generate_triangular_mesh();
@@ -359,6 +420,67 @@ void MasterPlugin::generate_triangular_mesh(){
     mesh_ = *mesh;
 
 }
+
+void MasterPlugin::generate_tet_mesh(){
+    int mesh_obj_id;
+    emit addEmptyObject(DATA_TETRAHEDRAL_MESH, mesh_obj_id);
+    auto *mesh_obj = PluginFunctions::tetrahedralMeshObject(mesh_obj_id);
+    mesh_obj->setName("Mesh");
+    mesh_obj->materialNode()->set_point_size(6.0);
+
+    // Create a mesh object
+    auto mesh = mesh_obj->mesh();
+
+    int dimension = tool_->meshDimension->value();
+
+    for(int z = 0; z < dimension; ++z){
+        for(int y = 0; y < dimension; ++y){
+            for(int x = 0; x < dimension; ++x){
+                mesh->add_vertex(ACG::Vec3d(x,y,z));
+            }
+        }
+    }
+    for(int z = 0; z < dimension-1; ++z){
+        for(int y = 0; y < dimension-1; ++y){
+            for(int x = 0; x < dimension-1; ++x){
+                VertexHandle v0(x + dimension * (y + dimension * z));
+                VertexHandle v1((x+1) + dimension * (y + dimension * z));
+                VertexHandle v2((x+1) + dimension * (y + dimension * (z+1)));
+                VertexHandle v3(x + dimension * (y + dimension * (z+1)));
+                VertexHandle v4(x + dimension * ((y+1) + dimension * z));
+                VertexHandle v5((x+1) + dimension * ((y+1) + dimension * z));
+                VertexHandle v6((x+1) + dimension * ((y+1) + dimension * (z+1)));
+                VertexHandle v7(x + dimension * ((y+1) + dimension * (z+1)));
+
+                mesh->add_cell(v0,v3,v1,v4, true);
+                mesh->add_cell(v2,v1,v3,v6, true);
+                mesh->add_cell(v5,v6,v4,v1, true);
+                mesh->add_cell(v7,v4,v6,v3, true);
+                mesh->add_cell(v4,v3,v1,v6, true);
+
+            }
+        }
+    }
+
+    mesh_obj->meshNode()->drawMode(
+                DrawModes::Cells_flat() |
+                DrawModes::Vertices());
+
+    mesh_obj->materialNode()->enable_alpha_test(0.8);
+    std::cout << "My mesh: \n"<< mesh->n_cells()<< " cells, "
+              << mesh->n_faces()<< " faces, "
+              << mesh->n_vertices()<< " vertices, "
+              << mesh->n_edges()<< " edges"
+              << std::endl;
+    emit updatedObject(mesh_obj->id(), UPDATE_ALL);
+
+    tetmesh_ = *mesh;
+
+  return;
+
+
+}
+
 TriMesh MasterPlugin::gen_world_mesh(){
     CustomMesh worldMesh;
     CustomMesh::VertexHandle vhandle[121];
@@ -385,79 +507,13 @@ TriMesh MasterPlugin::gen_world_mesh(){
                         worldMesh.vertex_handle(i*(dimension+1)+j));
        }
     }
-
-    std::cout << "World:"<< worldMesh.n_faces() << std::endl;
+    //  Request required status flags
+    worldMesh.request_vertex_status();
+    worldMesh.request_edge_status();
+    worldMesh.request_face_status();
     return worldMesh;
 }
 
-void MasterPlugin::generate_tet_mesh(){
-
-    int mesh_obj_id;
-    emit addEmptyObject(DATA_TETRAHEDRAL_MESH, mesh_obj_id);
-    auto *mesh_obj = PluginFunctions::tetrahedralMeshObject(mesh_obj_id);
-    mesh_obj->setName("Mesh");
-    mesh_obj->materialNode()->set_point_size(6.0);
-
-    // Create a mesh object
-    auto mesh = mesh_obj->mesh();
-
-    OpenVolumeMesh::VertexHandle v0 = mesh->add_vertex(ACG::Vec3d(-1.0, 0.0, 0.0));
-    OpenVolumeMesh::VertexHandle v1 = mesh->add_vertex(ACG::Vec3d( 0.0, 0.0, 1.0));
-    OpenVolumeMesh::VertexHandle v2 = mesh->add_vertex(ACG::Vec3d( 1.0, 0.0, 0.0));
-    OpenVolumeMesh::VertexHandle v3 = mesh->add_vertex(ACG::Vec3d( 0.0, 0.0,-1.0));
-    OpenVolumeMesh::VertexHandle v4 = mesh->add_vertex(ACG::Vec3d( 0.0, 1.0, 0.0));
-    std::vector<OpenVolumeMesh::VertexHandle> vertices;
-    // Add faces
-    vertices.push_back(v0); vertices.push_back(v1);vertices.push_back(v4);
-    OpenVolumeMesh::FaceHandle f0 = mesh->add_face(vertices);
-    vertices.clear();
-    vertices.push_back(v1); vertices.push_back(v2);vertices.push_back(v4);
-    OpenVolumeMesh::FaceHandle f1 = mesh->add_face(vertices);
-    vertices.clear();
-    vertices.push_back(v0); vertices.push_back(v1);vertices.push_back(v2);
-    OpenVolumeMesh::FaceHandle f2 = mesh->add_face(vertices);
-    vertices.clear();
-    vertices.push_back(v0); vertices.push_back(v4);vertices.push_back(v2);
-    OpenVolumeMesh::FaceHandle f3 = mesh->add_face(vertices);
-    vertices.clear();
-    vertices.push_back(v0); vertices.push_back(v4);vertices.push_back(v3);
-    OpenVolumeMesh::FaceHandle f4 = mesh->add_face(vertices);
-    vertices.clear();
-    vertices.push_back(v2); vertices.push_back(v3);vertices.push_back(v4);
-    OpenVolumeMesh::FaceHandle f5 = mesh->add_face(vertices);
-    vertices.clear();
-    vertices.push_back(v0); vertices.push_back(v2);vertices.push_back(v3);
-    OpenVolumeMesh::FaceHandle f6 = mesh->add_face(vertices);
-    std::vector<OpenVolumeMesh::HalfFaceHandle> halffaces;
-    // Add first tetrahedron
-    halffaces.push_back(mesh->halfface_handle(f0, 1));
-    halffaces.push_back(mesh->halfface_handle(f1, 1));
-    halffaces.push_back(mesh->halfface_handle(f2, 0));
-    halffaces.push_back(mesh->halfface_handle(f3, 1));
-    mesh->add_cell(halffaces);
-    // Add second tetrahedron
-    halffaces.clear();
-    halffaces.push_back(mesh->halfface_handle(f4, 1));
-    halffaces.push_back(mesh->halfface_handle(f5, 1));
-    halffaces.push_back(mesh->halfface_handle(f3, 0));
-    halffaces.push_back(mesh->halfface_handle(f6, 0));
-    mesh->add_cell(halffaces);
-
-
-    mesh_obj->meshNode()->drawMode(
-              ACG::SceneGraph::DrawModes::WIREFRAME
-            | ACG::SceneGraph::DrawModes::POINTS_COLORED
-            | ACG::SceneGraph::DrawModes::SOLID_FACES_COLORED);
-
-    mesh_obj->materialNode()->enable_alpha_test(0.8);
-    emit updatedObject(mesh_obj->id(), UPDATE_ALL);
-
-    tetmesh_ = *mesh;
-
-  return;
-
-
-}
 
 #if QT_VERSION < 0x050000
 Q_EXPORT_PLUGIN2(masterplugin, MasterPlugin);

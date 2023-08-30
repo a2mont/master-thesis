@@ -2,7 +2,7 @@
 #define OPENFLIPPER_EXPERIMENTS_HH
 
 #include <ObjectTypes/TriangleMesh/TriangleMesh.hh>
-#include "MainLoop.hh"
+#include "TriangleLoop.hh"
 
 class Experiment
 {
@@ -15,7 +15,7 @@ public:
     {}
 private:
     TriMesh& mesh_;
-    MainLoop loop2D_;
+    TriangleLoop loop2D_;
     std::map<int,Point> basePoints_;
     std::map<int,std::vector<Point>> targetPoints_;
     bool initialized_ = false;

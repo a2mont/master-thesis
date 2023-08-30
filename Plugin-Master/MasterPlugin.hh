@@ -19,8 +19,10 @@
 #include <OpenVolumeMesh/Mesh/PolyhedralMesh.hh>
 #include <ObjectTypes/TetrahedralMesh/TetrahedralMesh.hh>
 
-#include "MainLoop.hh"
+#include "TriangleLoop.hh"
+#include "TetLoop.hh"
 #include "MasterToolbar.hh"
+#include "DrawModes.hh"
 #include "Highlight.hh"
 #include "Experiments.hh"
 
@@ -90,7 +92,7 @@ private:
     //store selected vertices
     std::map<int,int> constraint_vhs_;
 
-    const double q_min_ = 0.7;
+    double q_min_ = 0.4;
 
     int timesteps_ = 0;
     int t_ = 0;

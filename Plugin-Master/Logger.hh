@@ -10,11 +10,11 @@ public:
     Logger(std::string _filename, const double _q_min): filename_(_filename) {
         file_.open(_filename, std::ofstream::out | std::ios::trunc);
         if(file_){
-            std::cout << "File opened" << std::endl;
             file_ << "Quality Min\n";
             file_ << _q_min << "\n";
             file_.close();
-        }
+        }else
+            std::cout << "\033[1;4;33mFailed to open file !!\033[0m" << std::endl;
     }
     ~Logger(){
         if(file_.is_open())

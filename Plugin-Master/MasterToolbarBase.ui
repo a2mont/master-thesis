@@ -17,7 +17,7 @@
    <item row="0" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_Base">
       <attribute name="title">
@@ -38,12 +38,12 @@
                <widget class="QComboBox" name="meshType">
                 <item>
                  <property name="text">
-                  <string>Triangular Mesh</string>
+                  <string>Tetrahedral Mesh</string>
                  </property>
                 </item>
                 <item>
                  <property name="text">
-                  <string>Tetrahedral Mesh</string>
+                  <string>Triangular Mesh</string>
                  </property>
                 </item>
                </widget>
@@ -60,7 +60,7 @@
                  <number>15</number>
                 </property>
                 <property name="value">
-                 <number>10</number>
+                 <number>5</number>
                 </property>
                </widget>
               </item>
@@ -344,22 +344,6 @@
             </item>
             <item row="0" column="0">
              <layout class="QGridLayout" name="gridLayout_9">
-              <item row="0" column="2">
-               <spacer name="horizontalSpacer_5">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::Fixed</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
               <item row="0" column="0">
                <widget class="QSpinBox" name="timestepsSpinBox">
                 <property name="suffix">
@@ -382,6 +366,41 @@
                 </property>
                 <property name="displayIntegerBase">
                  <number>10</number>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <spacer name="horizontalSpacer_5">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Fixed</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="0" column="3">
+               <widget class="QDoubleSpinBox" name="qualitySpinBox">
+                <property name="prefix">
+                 <string>Minimal quality: </string>
+                </property>
+                <property name="minimum">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.050000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.500000000000000</double>
                 </property>
                </widget>
               </item>

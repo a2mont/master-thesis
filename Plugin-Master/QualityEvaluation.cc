@@ -3,8 +3,6 @@
 double QualityEvaluation::evaluate(const OpenMesh::SmartFaceHandle _face, TriMesh& _mesh, const bool _verbose){
     double quality = 0.;
     double area = 0.;
-    double l_harm = 0.;
-    double l_rms = 1.;
 
     std::vector<double> edge_lengths;
 
@@ -17,11 +15,8 @@ double QualityEvaluation::evaluate(const OpenMesh::SmartFaceHandle _face, TriMes
     for(auto edge: edge_lengths){
         squaredEdgeLength += pow(edge,2);
     }
-//    l_harm = calculate_l_harm(edge_lengths); used for tets
-//    l_rms = calculate_l_rms(edge_lengths); used for tets
 
-    if(!std::isnan(area) && squaredEdgeLength > 0.){ //&& !std::isnan(l_harm) && !std::isnan(l_rms))
-//      quality = 6 * sqrt(2) * area * l_harm / pow(l_rms, 4); used for tets
+    if(!std::isnan(area) && squaredEdgeLength > 0.){
         quality = 4 * sqrt(3) * area / squaredEdgeLength;
     }
 
@@ -30,8 +25,6 @@ double QualityEvaluation::evaluate(const OpenMesh::SmartFaceHandle _face, TriMes
                      "Triangle " << _face.idx() <<
                      "\nEdge lengths: " << edge_lengths[0] << " " << edge_lengths[1] << " " << edge_lengths[2] <<
                      "\nArea: "<< area <<
-//                     "\nHarmonic length: " << l_harm <<
-//                     "\nRoot-mean-squared edge length: " << l_harm <<
                      "\nTotal squared edges length: " << squaredEdgeLength <<
                      "\nQuality: " << quality <<
                      "\n------------------------------"
@@ -41,6 +34,61 @@ double QualityEvaluation::evaluate(const OpenMesh::SmartFaceHandle _face, TriMes
     return quality;
 }
 
+double QualityEvaluation::evaluate(const OpenVolumeMesh::CellHandle _cell, TetrahedralMesh& _mesh, const bool _verbose){
+    double quality = 0.;
+    double volume = 0.;
+    double l_harm = 0.;
+    double l_rms = 1.;
+
+    std::vector<double> edge_lengths;
+
+    for(auto ce_it = _mesh.ce_iter(_cell); ce_it.valid(); ++ce_it){
+        double edgeLength = calculate_edge_length(_mesh, *ce_it);
+        edge_lengths.push_back(edgeLength);
+
+    }
+
+    volume = calculate_volume(_mesh, _cell);
+
+    l_harm = calculate_l_harm(edge_lengths);
+    l_rms = calculate_l_rms(edge_lengths);
+
+    if(!std::isnan(volume) && !std::isnan(l_harm) && !std::isnan(l_rms)){
+      quality = 6 * sqrt(2) * volume * l_harm / pow(l_rms, 4);
+    }
+
+    if(_verbose){
+        std::cout <<
+                     "Tet " << _cell.idx() <<
+                     "\nEdge lengths: ";
+        for(auto e: edge_lengths){
+                     std::cout << e << ", ";
+        }
+        std::cout <<
+                     "\nVolume: "<< volume <<
+                     "\nHarmonic length: " << l_harm <<
+                     "\nRoot-mean-squared edge length: " << l_harm <<
+                     "\nQuality: " << quality <<
+                     "\n------------------------------"
+        << std::endl;
+    }
+
+
+    return quality;
+}
+
+double QualityEvaluation::calculate_edge_length(TetrahedralMesh& _mesh, OpenVolumeMesh::EdgeHandle _edge){
+    double length = 0;
+    std::vector<OpenVolumeMesh::VertexHandle> vertices;
+    for(auto vh: _mesh.edge_vertices(_edge)){
+        vertices.push_back(vh);
+    }
+    auto vector = _mesh.vertex(vertices[1]) - _mesh.vertex(vertices[0]);
+
+    length = sqrt(pow(vector[0],2)+pow(vector[1],2)+pow(vector[2],2));
+//    std::cout << "Edge length: " <<length <<", Vector: " << vector <<std::endl;
+    return length;
+}
 
 double QualityEvaluation::calculate_area(TriMesh& _mesh, OpenMesh::SmartFaceHandle _faceHandle){
     double area = 0.;
@@ -56,26 +104,45 @@ double QualityEvaluation::calculate_area(TriMesh& _mesh, OpenMesh::SmartFaceHand
     return area;
 }
 
+// https://keisan.casio.com/exec/system/1223609147
+double QualityEvaluation::calculate_volume(TetrahedralMesh& _mesh, OpenVolumeMesh::CellHandle _cellHandle){
+    double volume = 0;
+    std::vector<ACG::Vec3d> vertices;
+    for(auto vh : _mesh.cell_vertices(_cellHandle)){
+//        std::cout << "Point: "<< _mesh.vertex(vh) << std::endl;
+        vertices.push_back(_mesh.vertex(vh));
+    }
+    ACG::Vec3d AB, AC, AD;
+    AB = vertices[1]-vertices[0];
+    AC = vertices[2]-vertices[0];
+    AD = vertices[3]-vertices[0];
+
+    double para = abs(AD.dot(AB.cross(AC)));
+
+    volume = para/6;
+
+    return volume;
+}
+
 double QualityEvaluation::calculate_l_harm(std::vector<double> _edge_lengths){
     //https://en.wikipedia.org/wiki/Harmonic_mean
     double l_harm = 0.;
-    double x1,x2,x3;
-    x1 = _edge_lengths[0];
-    x2 = _edge_lengths[1];
-    x3 = _edge_lengths[2];
+    double div = 0;
+    for(auto edge: _edge_lengths){
+        div += 1/edge;
+    }
+    l_harm = _edge_lengths.size()/div;
 
-    l_harm = 3*x1*x2*x3 / (x1*x2 + x1*x3 + x2*x3);
     return l_harm;
 }
 
 double QualityEvaluation::calculate_l_rms(std::vector<double> _edge_lengths){
     double l_rms = 1.;
-    double x1,x2,x3;
-    x1 = _edge_lengths[0];
-    x2 = _edge_lengths[1];
-    x3 = _edge_lengths[2];
-
-    l_rms = sqrt(pow(x1,2)+pow(x2,2)+pow(x3,2));
+    double mean_squared = 0;
+    for(auto edge: _edge_lengths){
+        mean_squared += pow(edge,2);
+    }
+    l_rms = sqrt(mean_squared / _edge_lengths.size());
 
     return l_rms;
 }

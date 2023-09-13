@@ -27,7 +27,7 @@ void MasterPlugin::initializePlugin()
 
 void MasterPlugin::pluginsInitialized(){
     // Arbitrary id for constraint vertex
-    constraint_vhs_[100] = 100;
+    constraint_vhs_[0] = 0;
     slot_generate_base_mesh();
 //    worldMesh_ = gen_world_mesh();
 //    slot_show_quality();
@@ -422,6 +422,7 @@ void MasterPlugin::generate_triangular_mesh(){
 }
 
 void MasterPlugin::generate_tet_mesh(){
+    int dimension = tool_->meshDimension->value();
     int mesh_obj_id;
     emit addEmptyObject(DATA_TETRAHEDRAL_MESH, mesh_obj_id);
     auto *mesh_obj = PluginFunctions::tetrahedralMeshObject(mesh_obj_id);
@@ -430,48 +431,42 @@ void MasterPlugin::generate_tet_mesh(){
 
     // Create a mesh object
     auto mesh = mesh_obj->mesh();
+    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(dimension, *mesh);
 
-    int dimension = tool_->meshDimension->value();
+//    for(int z = 0; z < dimension; ++z){
+//        for(int y = 0; y < dimension; ++y){
+//            for(int x = 0; x < dimension; ++x){
+//                mesh->add_vertex(ACG::Vec3d(x,y,z));
+//            }
+//        }
+//    }
+//    for(int z = 0; z < dimension-1; ++z){
+//        for(int y = 0; y < dimension-1; ++y){
+//            for(int x = 0; x < dimension-1; ++x){
+//                VertexHandle v0(x + dimension * (y + dimension * z));
+//                VertexHandle v1((x+1) + dimension * (y + dimension * z));
+//                VertexHandle v2(x + dimension * ((y+1) + dimension * z));
+//                VertexHandle v3((x+1) + dimension * ((y+1) + dimension * z));
+//                VertexHandle v4(x + dimension * (y + dimension * (z+1)));
+//                VertexHandle v5((x+1) + dimension * (y + dimension * (z+1)));
+//                VertexHandle v6(x + dimension * ((y+1) + dimension * (z+1)));
+//                VertexHandle v7((x+1) + dimension * ((y+1) + dimension * (z+1)));
 
-    for(int z = 0; z < dimension; ++z){
-        for(int y = 0; y < dimension; ++y){
-            for(int x = 0; x < dimension; ++x){
-                mesh->add_vertex(ACG::Vec3d(x,y,z));
-            }
-        }
-    }
-    for(int z = 0; z < dimension-1; ++z){
-        for(int y = 0; y < dimension-1; ++y){
-            for(int x = 0; x < dimension-1; ++x){
-                VertexHandle v0(x + dimension * (y + dimension * z));
-                VertexHandle v1((x+1) + dimension * (y + dimension * z));
-                VertexHandle v2((x+1) + dimension * (y + dimension * (z+1)));
-                VertexHandle v3(x + dimension * (y + dimension * (z+1)));
-                VertexHandle v4(x + dimension * ((y+1) + dimension * z));
-                VertexHandle v5((x+1) + dimension * ((y+1) + dimension * z));
-                VertexHandle v6((x+1) + dimension * ((y+1) + dimension * (z+1)));
-                VertexHandle v7(x + dimension * ((y+1) + dimension * (z+1)));
+//                mesh->add_cell(v0,v4,v1,v2, true);
+//                mesh->add_cell(v5,v1,v4,v7, true);
+//                mesh->add_cell(v7,v4,v2,v1, true);
+//                mesh->add_cell(v3,v7,v2,v1, true);
+//                mesh->add_cell(v6,v2,v7,v4, true);
 
-                mesh->add_cell(v0,v3,v1,v4, true);
-                mesh->add_cell(v2,v1,v3,v6, true);
-                mesh->add_cell(v5,v6,v4,v1, true);
-                mesh->add_cell(v7,v4,v6,v3, true);
-                mesh->add_cell(v4,v3,v1,v6, true);
-
-            }
-        }
-    }
+//            }
+//        }
+//    }
 
     mesh_obj->meshNode()->drawMode(
                 DrawModes::Cells_flat() |
                 DrawModes::Vertices());
 
     mesh_obj->materialNode()->enable_alpha_test(0.8);
-    std::cout << "My mesh: \n"<< mesh->n_cells()<< " cells, "
-              << mesh->n_faces()<< " faces, "
-              << mesh->n_vertices()<< " vertices, "
-              << mesh->n_edges()<< " edges"
-              << std::endl;
     emit updatedObject(mesh_obj->id(), UPDATE_ALL);
 
     tetmesh_ = *mesh;

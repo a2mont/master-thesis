@@ -216,7 +216,6 @@ void TriangleLoop::edge_contraction_pass(PriorityQueue* _A){
             }
             mesh_.collapse(he);
             Smoothing::smooth(mesh_, to);
-            break;
         }
     }
     // return surviving set in A and the triangles in M altered by the contractions

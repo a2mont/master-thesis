@@ -104,22 +104,40 @@ double QualityEvaluation::calculate_area(TriMesh& _mesh, OpenMesh::SmartFaceHand
     return area;
 }
 
-// https://keisan.casio.com/exec/system/1223609147
 double QualityEvaluation::calculate_volume(TetrahedralMesh& _mesh, OpenVolumeMesh::CellHandle _cellHandle){
     double volume = 0;
-    std::vector<ACG::Vec3d> vertices;
-    for(auto vh : _mesh.cell_vertices(_cellHandle)){
-//        std::cout << "Point: "<< _mesh.vertex(vh) << std::endl;
-        vertices.push_back(_mesh.vertex(vh));
+    std::vector<Eigen::Vector3d> vertices;
+    for(auto vh : _mesh.get_cell_vertices(_cellHandle)){
+//        std::cout << "Point " << vh << ": "<< _mesh.vertex(vh) << std::endl;
+        auto pt = _mesh.vertex(vh);
+        Eigen::Vector3d v(pt[0], pt[1], pt[2]);
+        vertices.push_back(v);
     }
-    ACG::Vec3d AB, AC, AD;
+    Eigen::Vector3d AB, AC, AD;
     AB = vertices[1]-vertices[0];
     AC = vertices[2]-vertices[0];
     AD = vertices[3]-vertices[0];
 
-    double para = abs(AD.dot(AB.cross(AC)));
+    Eigen::Matrix3d matrix;
+    matrix.col(0) = AB;
+    matrix.col(1) = AC;
+    matrix.col(2) = AD;
 
-    volume = para/6;
+
+    volume = matrix.determinant()/6;
+//    if(volume < 10e-7){
+//        matrix.col(1) = AD;
+//        matrix.col(2) = AC;
+//        volume = matrix.determinant()/6;
+//    }
+//    std::cout << "text "<< volume << std::endl;
+    if(volume < 10e-7){
+        std::cout << "\033[1;31m--------- Inverted tet:\033[0m "
+                  <<  _cellHandle
+                  << ", volume= "
+                  << volume << "\033[1;31m ---------\033[0m"
+                  << std::endl;
+    }
 
     return volume;
 }

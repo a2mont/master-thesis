@@ -3,6 +3,7 @@
 
 #include <ObjectTypes/TetrahedralMesh/TetrahedralMesh.hh>
 
+#include "TopologicalLink.hh"
 #include "VertexDisplacement.hh"
 #include "QualityEvaluation.hh"
 #include "Smoothing.hh"
@@ -61,6 +62,7 @@ private:
 
     void log( Logger* _logger, bool _endOfLine = false);
     void computeQuality();
+    bool edgeRemoval(EdgeHandle _eh);
 
 private:
     TetrahedralMesh& mesh_;
@@ -75,9 +77,9 @@ private:
     std::string logsAddress_;
     const bool includeLogs_;
     const double q_min_;
-    const std::string LOGS_BASE = "../../../../Plugin-Master/logs/quality_logs_";
+    const std::string LOGS_BASE = "../../../../Plugin-Master/logs/3D/quality_logs_";
     const std::string LOGS_EXTENSION = ".csv";
-    const std::string LOGS_STEP = "../../../../Plugin-Master/logs/quality_timesteps_";
+    const std::string LOGS_STEP = "../../../../Plugin-Master/logs/3D/quality_timesteps_";
 
 };
 

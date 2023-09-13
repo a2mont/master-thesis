@@ -76,7 +76,7 @@ void TetLoop::improve_tet(Tet _t){
         changed = false;
         do {
             // A <- topological_pass(A,M)
-//            changed = topologial_pass(&A);
+            changed = topologial_pass(&A);
             if(A.top().quality_ >= q_min_){ //|| A.empty()){
                 if(includeLogs_)
                     log(logger_,true);
@@ -87,8 +87,8 @@ void TetLoop::improve_tet(Tet _t){
         if(includeLogs_)
             log(logger_);
         // A <- edge_contraction_pass(A,M)
-        edge_contraction_pass(&A);
-        if(A.top().quality_ >= q_min_ || A.empty()){
+//        edge_contraction_pass(&A);
+        if(A.top().quality_ >= q_min_) {//|| A.empty()){
             if(includeLogs_)
                 log(logger_, true);
             return;
@@ -105,7 +105,7 @@ void TetLoop::improve_tet(Tet _t){
         if(includeLogs_)
             log(logger_);
         // smoothing_pass()
-        smoothing_pass(&A, 1);
+//        smoothing_pass(&A, 1);
         if(A.top().quality_ >= q_min_ || A.empty()){
             if(includeLogs_)
                 log(logger_, true);
@@ -142,6 +142,7 @@ bool TetLoop::topologial_pass(PriorityQueue* _A){
         for(auto e: edges){
             if(!mesh_.is_deleted(e)){
                 // remove e ?
+                changed = changed || edgeRemoval(e);
             }
         }
         for(auto f: faces){
@@ -154,6 +155,109 @@ bool TetLoop::topologial_pass(PriorityQueue* _A){
 
     return changed;
 }
+
+bool TetLoop::edgeRemoval(EdgeHandle _eh){
+    bool changed = false;
+    // let I the set of tets including eh
+    std::set<CellHandle> tetsIncludingEdge;
+    // let R the edge ring around eh
+    std::set<VertexHandle> oneRingVertices;
+    std::vector<EdgeHandle> newEdges;
+    PriorityQueue localQueue;
+
+    auto from = mesh_.edge(_eh).from_vertex();
+    auto to = mesh_.edge(_eh).to_vertex();
+
+    double q_old;
+    double maxQuality;
+    int maxId = -1;
+
+    for(auto cell: mesh_.edge_cells(_eh)){
+        tetsIncludingEdge.insert(cell);
+        for(auto vh: mesh_.cell_vertices(cell)){
+            if(vh.idx() != from.idx() && vh.idx() != to.idx()){
+                oneRingVertices.insert(vh);
+            }
+        }
+    }
+
+    // Empirical results from paper, edge removal for m > 7 rarely improves quality
+    if(oneRingVertices.size() > 7)
+        return changed = false;
+
+    for(auto ch: tetsIncludingEdge){
+        double quality = QualityEvaluation::evaluate(ch, mesh_);
+        localQueue.push(Tet(ch,quality));
+    }
+
+    q_old = localQueue.top().quality_;
+    maxQuality = 0;
+
+    reset_queue(localQueue);
+
+    auto tempBaseMesh = mesh_;
+
+    auto newVertex = tempBaseMesh.split_edge(_eh);
+
+    std::set<CellHandle> tetsAroundNew;
+
+    for(auto edge: tempBaseMesh.vertex_edges(newVertex)){
+        auto to = mesh_.edge(edge).to_vertex();
+        if(oneRingVertices.count(to) > 0){
+            newEdges.push_back(edge);
+
+        }
+    }
+
+    for(auto ch: tempBaseMesh.vertex_cells(newVertex)){
+        tetsAroundNew.insert(ch);
+    }
+
+    int i = 0;
+    for(auto eh: newEdges){
+        auto tempMesh = tempBaseMesh;
+        auto hehs = tempMesh.edge_halfedges(eh);
+        auto heh = tempMesh.from_vertex_handle(hehs[0]) == newVertex ? hehs[0] : hehs[1];
+        if(!link_condition(tempMesh, heh))
+            continue;
+        tempMesh.collapse_edge(heh);
+        for(auto ch: tetsAroundNew){
+            if(!tempMesh.is_deleted(ch)){
+                double quality = QualityEvaluation::evaluate(ch, tempMesh);
+                localQueue.push(Tet(ch,quality));
+            }
+        }
+        if(!localQueue.empty() && localQueue.top().quality_ > maxQuality){
+            maxQuality = localQueue.top().quality_;
+            maxId = i;
+        }
+        reset_queue(localQueue);
+        i++;
+    }
+
+    if(maxQuality > q_old){
+        auto edgeToCollapse = newEdges[i];
+        std::cout << newEdges.size() << std::endl;
+        auto hehs = tempBaseMesh.edge_halfedges(edgeToCollapse);
+        auto heh = tempBaseMesh.from_vertex_handle(hehs[0]) == newVertex ? hehs[0] : hehs[1];
+        if(link_condition(tempBaseMesh, heh)){
+            tempBaseMesh.collapse_edge(heh);
+            mesh_ = tempBaseMesh;
+            return changed = false;
+        }
+    }
+
+    std::cout
+            << "\033[1;33mEdge removal reverted, old: \033[0m"
+            << q_old
+            << "\033[1;33m vs max: \033[0m"
+            << maxQuality
+            << std::endl;
+
+    return changed;
+}
+
+
 void TetLoop::edge_contraction_pass(PriorityQueue* _A){
     std::cout << "\033[1;36mEdge contraction pass with _A of size: \033[0m" <<  _A->size() << std::endl;
     std::vector<EdgeHandle> E;
@@ -172,9 +276,8 @@ void TetLoop::edge_contraction_pass(PriorityQueue* _A){
                 auto he = mesh_.edge_halfedges(e)[0];
                 auto from = mesh_.from_vertex_handle(he);
                 auto to = mesh_.to_vertex_handle(he);
-                std::cout << "Boundary: "<< mesh_.is_boundary(from) << " " << mesh_.is_boundary(to) << std::endl;
-//                if(mesh_.is_boundary(from) && mesh_.is_boundary(to))
-//                    continue;
+                if((mesh_.is_boundary(from) && mesh_.is_boundary(to))|| !link_condition(mesh_, e))
+                    continue;
                 // if only one vertex is on the boundary, invert the collapse direction
                 if(mesh_.is_boundary(from)){
                     he = mesh_.edge_halfedges(e)[1];
@@ -192,7 +295,6 @@ void TetLoop::edge_contraction_pass(PriorityQueue* _A){
                 }
                 auto remain = mesh_.collapse_edge(he);
                 Smoothing::smooth(mesh_, remain);
-//                break;
             }
         }
 
@@ -218,7 +320,7 @@ void TetLoop::smoothing_pass(PriorityQueue* _A, int _iterations){
     std::cout << "\033[1;36mSmoothing pass with _A of size: \033[0m" <<  _A->size() << std::endl;
     // V the vertices of the tets in A
     for(int i = 0; i < _iterations; ++i){
-        std::vector<OpenVolumeMesh::VertexHandle> V;
+        std::vector<VertexHandle> V;
         while(!_A->empty()) {
             Tet top = _A->top();
             _A->pop();

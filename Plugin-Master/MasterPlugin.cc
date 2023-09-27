@@ -29,6 +29,7 @@ void MasterPlugin::pluginsInitialized(){
     // Arbitrary id for constraint vertex
     constraint_vhs_[0] = 0;
     slot_generate_base_mesh();
+    Tests::runAll();
 //    worldMesh_ = gen_world_mesh();
 //    slot_show_quality();
 //    slot_show_constraint_vertex();
@@ -431,36 +432,22 @@ void MasterPlugin::generate_tet_mesh(){
 
     // Create a mesh object
     auto mesh = mesh_obj->mesh();
+//    auto v0 = mesh->add_vertex(ACG::Vec3d( 0,  0,  0));
+//    auto v1 = mesh->add_vertex(ACG::Vec3d(-1,  5,  1));
+//    auto v2 = mesh->add_vertex(ACG::Vec3d( 0,  5, -1));
+//    auto v3 = mesh->add_vertex(ACG::Vec3d( 1,  5,  1));
+//    auto v4 = mesh->add_vertex(ACG::Vec3d( 0, 10,  0));
+
+//    mesh->add_cell(v0,v1,v3,v4, true);
+//    mesh->add_cell(v0,v2,v1,v4, true);
+//    mesh->add_cell(v4,v2,v3,v0, true);
+
+//    std::map<int,int> cv = {{0,0}};
+//    TetLoop loop(*mesh, 0.4, cv);
+//    loop.edgeRemoval(EdgeHandle(4));
+//    mesh->split_edge(EdgeHandle(4));
+
     TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(dimension, *mesh);
-
-//    for(int z = 0; z < dimension; ++z){
-//        for(int y = 0; y < dimension; ++y){
-//            for(int x = 0; x < dimension; ++x){
-//                mesh->add_vertex(ACG::Vec3d(x,y,z));
-//            }
-//        }
-//    }
-//    for(int z = 0; z < dimension-1; ++z){
-//        for(int y = 0; y < dimension-1; ++y){
-//            for(int x = 0; x < dimension-1; ++x){
-//                VertexHandle v0(x + dimension * (y + dimension * z));
-//                VertexHandle v1((x+1) + dimension * (y + dimension * z));
-//                VertexHandle v2(x + dimension * ((y+1) + dimension * z));
-//                VertexHandle v3((x+1) + dimension * ((y+1) + dimension * z));
-//                VertexHandle v4(x + dimension * (y + dimension * (z+1)));
-//                VertexHandle v5((x+1) + dimension * (y + dimension * (z+1)));
-//                VertexHandle v6(x + dimension * ((y+1) + dimension * (z+1)));
-//                VertexHandle v7((x+1) + dimension * ((y+1) + dimension * (z+1)));
-
-//                mesh->add_cell(v0,v4,v1,v2, true);
-//                mesh->add_cell(v5,v1,v4,v7, true);
-//                mesh->add_cell(v7,v4,v2,v1, true);
-//                mesh->add_cell(v3,v7,v2,v1, true);
-//                mesh->add_cell(v6,v2,v7,v4, true);
-
-//            }
-//        }
-//    }
 
     mesh_obj->meshNode()->drawMode(
                 DrawModes::Cells_flat() |

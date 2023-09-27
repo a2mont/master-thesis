@@ -46,11 +46,32 @@ public:
     using PriorityQueue = std::priority_queue<Tet, std::vector<Tet>, CompareQuality>;
     using Point = ACG::Vec3d;
 
+private:
+    struct FaceWithChildren
+    {
+        FaceHandle fh_;
+        std::set<FaceHandle> children_;
+        FaceWithChildren(){}
+        FaceWithChildren(FaceHandle _fh): fh_(_fh) {}
+        FaceWithChildren(FaceHandle _fh, std::set<FaceHandle> _children): fh_(_fh), children_(_children) {}
+    };
+    struct TestNeighborResult {
+        double o_;
+        double n_;
+        std::vector<FaceWithChildren> h_;
+        TestNeighborResult(double _o, double _n, std::vector<FaceWithChildren> _h):
+            o_(_o),
+            n_(_n),
+            h_(_h)
+        {}
+    };
 
 public:
     void loop(int _max_iter=1);
-private:
     void static reset_queue(PriorityQueue& _queue);
+    bool edgeRemoval(EdgeHandle _eh);
+    VertexHandle contractEdge(EdgeHandle _eh, std::vector<CellHandle>& _tetsAltered);
+private:
 
     bool topologial_pass(PriorityQueue* _A);
     void edge_contraction_pass(PriorityQueue* _A);
@@ -62,7 +83,13 @@ private:
 
     void log( Logger* _logger, bool _endOfLine = false);
     void computeQuality();
-    bool edgeRemoval(EdgeHandle _eh);
+    bool faceRemoval(FaceHandle _fh);
+    void multiFace(FaceHandle _fh);
+    TestNeighborResult testNeighbor(VertexHandle a,
+                      VertexHandle b,
+                      VertexHandle u,
+                      VertexHandle w);
+    double orient3D(VertexHandle _a, VertexHandle _b, VertexHandle _c, VertexHandle _d);
 
 private:
     TetrahedralMesh& mesh_;

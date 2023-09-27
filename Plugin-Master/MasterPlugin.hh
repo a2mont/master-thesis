@@ -26,6 +26,7 @@
 #include "Highlight.hh"
 #include "Experiments.hh"
 #include "TetrahedralizedVoxelGridGenerator.hh"
+#include "Tests.hh"
 
 class MasterPlugin : public QObject, BaseInterface, ToolboxInterface, LoggingInterface, LoadSaveInterface, MouseInterface, PickingInterface
 {

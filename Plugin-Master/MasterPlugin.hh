@@ -25,6 +25,7 @@
 #include "DrawModes.hh"
 #include "Highlight.hh"
 #include "Experiments.hh"
+#include "Experiments3D.hh"
 #include "TetrahedralizedVoxelGridGenerator.hh"
 #include "Tests.hh"
 
@@ -76,13 +77,13 @@ private slots:
 
 
 public :
-  
+
   ~MasterPlugin() {};
-  
+
   QString name() { return QString("Master Plugin"); };
-  
+
   QString description() { return QString("Plugin used for my thesis !"); };
-  
+
 private:
     typedef OpenMesh::TriMesh_ArrayKernelT<OpenMesh::DefaultTraitsDouble> CustomMesh;
     typedef OpenVolumeMesh::GeometricPolyhedralMeshV3f MyMesh;
@@ -101,8 +102,8 @@ private:
     TriMesh mesh_;
     TriMesh worldMesh_;
     TetrahedralMesh tetmesh_;
-    Experiment *experiment_;
-
+    Experiment *experiment2D_;
+    Experiment3D* experiment3D_;
 
     void generate_triangular_mesh();
     void generate_tet_mesh();

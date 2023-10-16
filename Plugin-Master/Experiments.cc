@@ -81,7 +81,7 @@ void Experiment::stretch2D(const int _timesteps, const int _currentT){
         mesh_.point(vh) = target;
     }
     // remesh
-    loop2D_.loop();
+    loop.loop();
 }
 
 void Experiment::compress2D(const int _timesteps, const int _currentT){
@@ -164,7 +164,7 @@ void Experiment::compress2D(const int _timesteps, const int _currentT){
         mesh_.point(vh) = target;
     }
     // remesh
-    loop2D_.loop();
+    loop.loop();
 }
 
 Eigen::Vector3f Experiment::generateParabola(Point _a, Point _b, Point _c){

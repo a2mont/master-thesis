@@ -40,6 +40,14 @@ void TetLoop::computeQuality(){
         quality_queue_.push(Tet(*c_it, quality));
     }
 }
+void TetLoop::computeQuality(TetLoop::PriorityQueue& _queue, TetrahedralMesh& _mesh){
+    reset_queue(_queue);
+    for(auto c_it = _mesh.cells_begin(); c_it != _mesh.cells_end(); ++c_it){
+        double quality = QualityEvaluation::evaluate(*c_it, _mesh);
+        _queue.push(Tet(*c_it, quality));
+    }
+}
+
 void TetLoop::log(Logger* _logger, bool _endOfLine){
     computeQuality();
     _logger->logQuality(quality_queue_.top().quality_);
@@ -76,7 +84,7 @@ void TetLoop::improve_tet(Tet _t){
         changed = false;
         do {
             // A <- topological_pass(A,M)
-            changed = topologial_pass(&A);
+//            changed = topologial_pass(&A);
             if(A.top().quality_ >= q_min_){ //|| A.empty()){
                 if(includeLogs_)
                     log(logger_,true);
@@ -159,7 +167,7 @@ bool TetLoop::topologial_pass(PriorityQueue* _A){
     return changed;
 }
 
-bool TetLoop::edgeRemoval(EdgeHandle _eh){
+bool TetLoop::edgeRemoval(EdgeHandle _eh, bool _verbose){
     bool changed = false;
     // let I the set of tets including eh
     std::set<CellHandle> tetsIncludingEdge;
@@ -199,24 +207,7 @@ bool TetLoop::edgeRemoval(EdgeHandle _eh){
     reset_queue(localQueue);
 
     auto tempBaseMesh = mesh_;
-
-//    std::cout << "vertices: " <<tempBaseMesh.n_vertices()
-//              << ", edges: " << tempBaseMesh.n_edges()
-//              << ", faces: " << tempBaseMesh.n_faces()
-//              << ", cells: " << tempBaseMesh.n_cells()<< std::endl;
     auto newVertex = tempBaseMesh.split_edge(_eh);
-//    std::cout << "vertices: " <<tempBaseMesh.n_vertices()
-//              << ", edges: " << tempBaseMesh.n_edges()
-//              << ", faces: " << tempBaseMesh.n_faces()
-//              << ", cells: " << tempBaseMesh.n_cells()<< std::endl;
-
-//    for(auto edge: tempBaseMesh.vertex_edges(newVertex)){
-//        auto to = tempBaseMesh.edge(edge).to_vertex();
-//        if(oneRingVertices.count(to) > 0){
-//            newEdges.push_back(edge);
-
-//        }
-//    }
 
     for(auto vheh: tempBaseMesh.outgoing_halfedges(newVertex)){
         if(tempBaseMesh.to_vertex_handle(vheh) == to || tempBaseMesh.to_vertex_handle(vheh) == from)
@@ -257,19 +248,60 @@ bool TetLoop::edgeRemoval(EdgeHandle _eh){
             return changed = true;
         }
     }
-
-    std::cout
-            << "\033[1;33mEdge removal reverted, old: \033[0m"
-            << q_old
-            << "\033[1;33m vs max: \033[0m"
-            << maxQuality
-            << std::endl;
+    if(_verbose){
+        std::cout
+                << "\033[1;33mEdge removal reverted, old: \033[0m"
+                << q_old
+                << "\033[1;33m vs max: \033[0m"
+                << maxQuality
+                << std::endl;
+    }
 
     return changed;
 }
 
 bool TetLoop::faceRemoval(FaceHandle _fh){
     bool changed = false;
+    auto tempMesh = mesh_;
+    auto bestMesh = mesh_;
+    PriorityQueue tempQueue;
+
+    computeQuality(tempQueue, mesh_);
+    double q_old = tempQueue.top().quality_;
+    double q_max = q_old;
+
+    flip23(_fh);
+    double q_new = tempQueue.top().quality_;
+    computeQuality(tempQueue, mesh_);
+    q_new = tempQueue.top().quality_;
+    if(q_new > q_max){
+        q_max = q_new;
+        bestMesh = mesh_;
+        changed = true;
+//        std::cout << "2-3 flip has better quality" << std::endl;
+    }
+
+    mesh_ = tempMesh;
+    flip22(_fh);
+    computeQuality(tempQueue, mesh_);
+    if(q_new > q_max){
+        q_max = q_new;
+        bestMesh = mesh_;
+        changed = true;
+//        std::cout << "2-2 flip has better quality" << std::endl;
+    }
+
+//    mesh_ = tempMesh;
+//    multiFace(_fh);
+//    computeQuality(tempQueue, mesh_);
+//    if(q_new > q_max){
+//        q_max = q_new;
+//        bestMesh = mesh_;
+//        changed = true;
+//        std::cout << "Multi face has better quality" << std::endl;
+//    }
+
+    mesh_ = bestMesh;
 
     return changed;
 }
@@ -297,19 +329,24 @@ void TetLoop::multiFace(FaceHandle _fh){
                              results_wu.o_});
     double q_new = std::min({results_uv.n_, results_vw.n_, results_wu.n_});
     if(q_new > q_old){
-        // TODO: remove f with 2-3 split
-        for(auto g: results_uv.h_){
-            // TODO: remove g with 3-2 split
+        flip23(_fh);
+        std::vector<FaceWithChildren> total;
+        total.insert(total.end(), results_uv.h_.begin(), results_uv.h_.end());
+        total.insert(total.end(), results_vw.h_.begin(), results_vw.h_.end());
+        total.insert(total.end(), results_wu.h_.begin(), results_wu.h_.end());
+
+        for(auto g: total){
+            flip32Recurse(g, FaceWithChildren(_fh));
         }
     }
 }
 
 /**
- * @param f, a triangular face with vertices u,w
+ * With f the face to remove
  * @param a, a vertex sandwiching f
  * @param b, a vertex sandwiching f
- * @param u
- * @param w
+ * @param u, vertex of f
+ * @param w, vertex of f
  */
 TetLoop::TestNeighborResult TetLoop::testNeighbor(VertexHandle a,
                            VertexHandle b,
@@ -380,6 +417,75 @@ double TetLoop::orient3D(VertexHandle _a, VertexHandle _b, VertexHandle _c, Vert
         matrix.col(j++) = c;
     }
     return matrix.determinant();
+}
+
+void TetLoop::flip32Recurse(TetLoop::FaceWithChildren _g, TetLoop::FaceWithChildren _parent){
+    EdgeHandle toRemove;
+    for(auto parentEdge: mesh_.face_edges(_parent.fh_)){
+        for(auto edge: mesh_.face_edges(_g.fh_)){
+            if(edge == parentEdge){
+                toRemove = edge;
+            }
+        }
+    }
+    flip32(toRemove);
+    for(auto h: _g.children_){
+        flip32Recurse(h, _g);
+    }
+}
+
+void TetLoop::flip32(EdgeHandle _eh){
+    if(mesh_.is_deleted(_eh))
+        return;
+    auto ends = mesh_.edge_vertices(_eh);
+    HalfEdgeHandle toCollapse = mesh_.InvalidHalfEdgeHandle;
+    auto temp = mesh_;
+    auto newVertex = temp.split_edge(_eh);
+    for(auto heh: mesh_.outgoing_halfedges(newVertex)){
+        if(mesh_.to_vertex_handle(heh) != ends[0] && mesh_.to_vertex_handle(heh) != ends[1]){
+            toCollapse = heh;
+        }
+    }
+    if(link_condition(temp,toCollapse)){
+        temp.collapse_edge(toCollapse);
+        mesh_ = temp;
+    }
+}
+
+void TetLoop::flip23(FaceHandle _fh){
+    if(mesh_.is_deleted(_fh))
+        return;
+    auto hfh = mesh_.face_halffaces(_fh)[0];
+    auto toVertex = mesh_.halfface_opposite_vertex(hfh);
+    if(mesh_.is_boundary(toVertex)){
+        hfh = mesh_.face_halffaces(_fh)[1];
+        toVertex = mesh_.halfface_opposite_vertex(hfh);
+    }
+    auto temp = mesh_;
+    auto newVertex = temp.split_face(_fh);
+    auto heToCollapse = temp.halfedge(newVertex, toVertex);
+    if(link_condition(temp, heToCollapse)){
+        temp.collapse_edge(heToCollapse);
+        mesh_ = temp;
+    }
+}
+
+void TetLoop::flip22(FaceHandle _fh){
+    if(mesh_.is_deleted(_fh))
+        return;
+    HalfEdgeHandle heh;
+    auto hfh = mesh_.face_halffaces(_fh)[0];
+    for(auto he: mesh_.face_halfedges(_fh)){
+        heh = he;
+    }
+    auto temp = mesh_;
+    auto toVertex = temp.to_vertex_handle(mesh_.next_halfedge_in_halfface(heh, hfh));
+    auto newVertex = temp.split_edge(temp.edge_handle(heh));
+    auto heToCollapse = temp.halfedge(newVertex, toVertex);
+    if(link_condition(temp, heToCollapse)){
+        temp.collapse_edge(heToCollapse);
+        mesh_ = temp;
+    }
 }
 
 

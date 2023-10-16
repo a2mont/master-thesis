@@ -145,13 +145,13 @@ double QualityEvaluation::calculate_volume(TetrahedralMesh& _mesh,
 
     volume = matrix.determinant()/6;
 
-    if(volume < 10e-7){
-        std::cout << "\033[1;31m--------- Inverted tet with vertices: \033[0m "
-                  <<  _v0 << ", " << _v1 << ", " << _v2 << ", " << _v3
-                  << ", volume= "
-                  << volume << "\033[1;31m ---------\033[0m"
-                  << std::endl;
-    }
+//    if(volume < 10e-7){
+//        std::cout << "\033[1;31m--------- Inverted tet with vertices: \033[0m "
+//                  <<  _v0 << ", " << _v1 << ", " << _v2 << ", " << _v3
+//                  << ", volume= "
+//                  << volume << "\033[1;31m ---------\033[0m"
+//                  << std::endl;
+//    }
 
     return volume;
 }

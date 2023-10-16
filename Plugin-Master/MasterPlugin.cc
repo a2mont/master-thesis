@@ -29,7 +29,7 @@ void MasterPlugin::pluginsInitialized(){
     // Arbitrary id for constraint vertex
     constraint_vhs_[0] = 0;
     slot_generate_base_mesh();
-    Tests::runAll();
+//    Tests::runAll();
 //    worldMesh_ = gen_world_mesh();
 //    slot_show_quality();
 //    slot_show_constraint_vertex();
@@ -259,6 +259,9 @@ void MasterPlugin::slot_displace_constraint_vertex(){
 
 void MasterPlugin::slot_start_experiment(){
     t_ = 0;
+    timesteps_ = tool_->timestepsSpinBox->value();
+    q_min_ = tool_->qualitySpinBox->value();
+
     tool_->nextButton->setEnabled(true);
     tool_->beginExpButton->setEnabled(false);
     tool_->experiment_tabs->setEnabled(false);
@@ -266,28 +269,43 @@ void MasterPlugin::slot_start_experiment(){
     tool_->qualitySpinBox->setEnabled(false);
     tool_->experiment2D->setEnabled(false);
     tool_->experiment3D->setEnabled(false);
+
+    // -------------------------- 2D --------------------
     for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
          o_it != PluginFunctions::objectsEnd(); ++o_it) {
         auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
         auto *trimesh = tri_obj->mesh();
 
         tri_obj->materialNode()->set_point_size(3.0);
-        timesteps_ = tool_->timestepsSpinBox->value();
-        q_min_ = tool_->qualitySpinBox->value();
 
         std::map<int,ACG::Vec3d> basePoints;
 
         for(auto vh: mesh_.vertices()){
             basePoints[vh.idx()] = mesh_.point(vh);
         }
-        experiment_ = new Experiment(mesh_, worldMesh_,basePoints, q_min_, constraint_vhs_);
+        experiment2D_ = new Experiment(mesh_, worldMesh_,basePoints, q_min_, constraint_vhs_);
         std::cout << "Selected experiment: " << tool_->experiment2D->currentText().toStdString() << std::endl;
+
+        slot_experiment_loop();
+    }
+    // -------------------------- 3D --------------------
+    for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TETRAHEDRAL_MESH);
+         o_it != PluginFunctions::objectsEnd(); ++o_it) {
+        auto *tet_obj = PluginFunctions::tetrahedralMeshObject(*o_it);
+        auto *tetmesh = tet_obj->mesh();
+
+        tet_obj->materialNode()->set_point_size(3.0);
+
+        experiment3D_ = new Experiment3D(tetmesh_, q_min_, constraint_vhs_);
+        std::cout << "Selected experiment: " << tool_->experiment3D->currentText().toStdString() << std::endl;
 
         slot_experiment_loop();
     }
 }
 
 void MasterPlugin::slot_experiment_loop(){
+
+    // -------------------------- 2D --------------------
     for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
          o_it != PluginFunctions::objectsEnd(); ++o_it) {
         auto *tri_obj = PluginFunctions::triMeshObject(*o_it);
@@ -299,10 +317,10 @@ void MasterPlugin::slot_experiment_loop(){
         */
         switch (tool_->experiment2D->currentIndex()) {
             case 0:
-                experiment_->compress2D(timesteps_, ++t_);
+                experiment2D_->compress2D(timesteps_, ++t_);
                 break;
             case 1:
-                experiment_->stretch2D(timesteps_, ++t_);
+                experiment2D_->stretch2D(timesteps_, ++t_);
                 break;
             default:
                 break;
@@ -330,8 +348,29 @@ void MasterPlugin::slot_experiment_loop(){
             tool_->experiment3D->setEnabled(true);
         }
     }
+    // -------------------------- 3D --------------------
+    for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TETRAHEDRAL_MESH);
+         o_it != PluginFunctions::objectsEnd(); ++o_it) {
+        auto *tet_obj = PluginFunctions::tetrahedralMeshObject(*o_it);
+        auto *tetmesh = tet_obj->mesh();
 
+        experiment3D_->generate_torsion_mesh(++t_ * 0.1);
 
+        *tetmesh = tetmesh_;
+
+        emit updatedObject(tet_obj->id(), UPDATE_ALL);
+
+        // reset when done with experiment
+        if(t_ >= timesteps_){
+            std::cout << "Experiment ended" << std::endl;
+            tool_->nextButton->setEnabled(false);
+            tool_->beginExpButton->setEnabled(true);
+            tool_->experiment_tabs->setEnabled(true);
+            tool_->timestepsSpinBox->setEnabled(true);
+            tool_->experiment2D->setEnabled(true);
+            tool_->experiment3D->setEnabled(true);
+        }
+    }
 }
 
 // -------------------- Simple helpers ----------------------------
@@ -432,20 +471,6 @@ void MasterPlugin::generate_tet_mesh(){
 
     // Create a mesh object
     auto mesh = mesh_obj->mesh();
-//    auto v0 = mesh->add_vertex(ACG::Vec3d( 0,  0,  0));
-//    auto v1 = mesh->add_vertex(ACG::Vec3d(-1,  5,  1));
-//    auto v2 = mesh->add_vertex(ACG::Vec3d( 0,  5, -1));
-//    auto v3 = mesh->add_vertex(ACG::Vec3d( 1,  5,  1));
-//    auto v4 = mesh->add_vertex(ACG::Vec3d( 0, 10,  0));
-
-//    mesh->add_cell(v0,v1,v3,v4, true);
-//    mesh->add_cell(v0,v2,v1,v4, true);
-//    mesh->add_cell(v4,v2,v3,v0, true);
-
-//    std::map<int,int> cv = {{0,0}};
-//    TetLoop loop(*mesh, 0.4, cv);
-//    loop.edgeRemoval(EdgeHandle(4));
-//    mesh->split_edge(EdgeHandle(4));
 
     TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(dimension, *mesh);
 

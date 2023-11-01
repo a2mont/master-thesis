@@ -69,10 +69,10 @@ def plot_timesteps(datas):
 
     plt.show()
 
-def find_files(regex):
+def find_files(regex, dimension='3D'):
     filenames = []
 
-    for _, _, files in os.walk('./2D/'):
+    for _, _, files in os.walk(f'./{dimension}/'):
         for file in files:
             if regex.match(file):
                 filenames.append(file)
@@ -80,7 +80,7 @@ def find_files(regex):
     print(f'{len(filenames)} files\n{filenames}')
     return filenames
 
-def data_from_files(filenames, dimension='2D'):
+def data_from_files(filenames, dimension='3D'):
     datas = {}
     for f in filenames:
         idx = 0

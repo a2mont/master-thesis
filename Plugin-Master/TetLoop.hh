@@ -68,8 +68,9 @@ private:
 
 public:
     void loop(int _max_iter=1);
+    bool edgeRemoval(EdgeHandle _eh, std::vector<CellHandle>* const _cellsAdded, bool _verbose = true);
     bool edgeRemoval(EdgeHandle _eh, bool _verbose = true);
-    bool faceRemoval(FaceHandle _fh);
+    bool faceRemoval(FaceHandle _fh, bool _verbose = true);
     VertexHandle contractEdge(EdgeHandle _eh, std::vector<CellHandle>& _tetsAltered);
     static void reset_queue(PriorityQueue& _queue);
     static void computeQuality(TetLoop::PriorityQueue &_queue, TetrahedralMesh &_mesh);
@@ -94,7 +95,7 @@ private:
     void flip32Recurse(TetLoop::FaceWithChildren _g, TetLoop::FaceWithChildren _parent);
     void flip32(EdgeHandle _eh);
     void flip23(FaceHandle _fh);
-    void flip22(FaceHandle _fh);
+    void flip22(FaceHandle _fh, std::vector<CellHandle>* const _cellsAdded);
 
 private:
     TetrahedralMesh& mesh_;

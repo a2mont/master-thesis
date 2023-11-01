@@ -68,7 +68,7 @@ bool Tests::t_StressEdgeRemoval(){
     std::map<int,int> cv = {{0,0}};
     int reverts = 0;
     int iters = 0;
-    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(15, mesh);
+    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(5, mesh);
 
     TetLoop loop(mesh, 0.4, cv);
     for(auto e: mesh.edges()){
@@ -148,14 +148,15 @@ bool Tests::t_StressFaceRemoval(){
     TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(5, mesh);
 
     TetLoop loop(mesh, 0.4, cv);
-    for(int i = 0; i < 1000; ++i){
+    int max = mesh.n_logical_faces();
+    for(int i = 0; i < max; ++i){
         auto f = FaceHandle(i);
-        if(!mesh.is_boundary(f)){
-            auto result = loop.faceRemoval(f);
+        if(!mesh.is_deleted(f)){
+            auto result = loop.faceRemoval(f, false);
             reverts = result ? reverts : reverts + 1;
         }
         if(iters++ % 50 == 0){
-            std::cout << "Iter " << iters << "/" << 1000 << std::endl;
+            std::cout << "Iter " << iters << "/" << max << std::endl;
         }
     }
 
@@ -218,7 +219,7 @@ bool Tests::runAll(){
     contract    = t_EdgeContraction();
     edge        = t_EdgeRemoval();
 //    face        = t_FaceRemoval();
-//    stressEdge  = t_StressEdgeRemoval();
+    stressEdge  = t_StressEdgeRemoval();
     stressFace  = t_StressFaceRemoval();
     passed =
             contract &&

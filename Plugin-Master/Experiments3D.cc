@@ -2,8 +2,8 @@
 
 void Experiment3D::generate_torsion_mesh(double torsion_turns_count){
 
-    TetrahedralMesh mesh;
-    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(10, 10, 10, mesh);
+//    TetrahedralMesh mesh;
+//    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(10, 10, 10, mesh);
 
     double target_angle = torsion_turns_count * 2 * M_PI;
 
@@ -22,18 +22,18 @@ void Experiment3D::generate_torsion_mesh(double torsion_turns_count){
     auto min_z = min_pos[2];
     auto max_z = max_pos[2];
 
-    std::cout<<" min/max z = "<<min_z<<" / "<<max_z<<std::endl;
+//    std::cout<<" min/max z = "<<min_z<<" / "<<max_z<<std::endl;
 
 
     auto center = 0.5 * (max_pos + min_pos);
-    std::cout<<" - center at "<<center.transpose()<<std::endl;
+//    std::cout<<" - center at "<<center.transpose()<<std::endl;
 
-    for(auto v: mesh.vertices()){
-        mesh.set_vertex(v, mesh.vertex(v) - TetrahedralMesh::PointT(center[0], center[1], 0.0));
+    for(auto v: mesh_.vertices()){
+        mesh_.set_vertex(v, mesh_.vertex(v) - TetrahedralMesh::PointT(center[0], center[1], 0.0));
     }
 
-    for(auto v: mesh.vertices()){
-        auto init_pos = mesh.vertex(v);
+    for(auto v: mesh_.vertices()){
+        auto init_pos = mesh_.vertex(v);
         Eigen::Vector2f xy;
         xy <<init_pos[0], init_pos[1];
         auto z = init_pos[2];
@@ -48,8 +48,8 @@ void Experiment3D::generate_torsion_mesh(double torsion_turns_count){
 
         auto target_xy = rot * xy;
 
-        mesh.set_vertex(v, {target_xy[0], target_xy[1], z});
+        mesh_.set_vertex(v, {target_xy[0], target_xy[1], z});
 
     }
-    mesh_ = mesh;
+    loop_.loop();
 }

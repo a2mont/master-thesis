@@ -15,6 +15,7 @@ public:
     static bool t_StressEdgeRemoval();
     static bool runAll();
     static bool t_StressFaceRemoval();
+    static bool t_chebyshev_centroid();
 private:
     Tests();
 };

@@ -209,24 +209,68 @@ bool Tests::t_EdgeContraction(){
     return true;
 }
 
+bool Tests::t_chebyshev_centroid(){
+    std::cout << "\033[1;35m------------------------------"
+                 "\nChebyshev center test\033[0m"<< std::endl;
+    TetrahedralMesh mesh;
 
+    auto v0 = mesh.add_vertex({1.5, 1.5, -1}); //cluster virtual vertex
+    auto v1 = mesh.add_vertex({0,2,0});
+    auto v2 = mesh.add_vertex({1,0,0});
+    auto v3 = mesh.add_vertex({1,1,0});
+    auto v4 = mesh.add_vertex({2,1,1});
+    auto v5 = mesh.add_vertex({2,0,0});
+    auto v6 = mesh.add_vertex({3,2,0});
+
+
+    mesh.add_cell({v3, v2, v1, v0});
+    mesh.add_cell({v3, v1, v6, v0});
+    mesh.add_cell({v3, v6, v4, v0});
+    mesh.add_cell({v4, v6, v5, v0});
+
+
+    std::map<int,int> cv = {{0,0}};
+    TetLoop loop(mesh, 0.4, cv);
+    std::vector<HalfFaceHandle> hfs;
+    for(auto hf:mesh.halffaces()){
+        if(mesh.is_boundary(hf)){
+            hfs.push_back(hf);
+        }
+    }
+
+    ACG::Vec3d new_pos;
+    auto cheb_result = loop.find_chebyshev_center(hfs, 1e-7, new_pos);
+
+    if(cheb_result){
+        std::cout<<" --> failed to find Chebyshev center"<<std::endl;
+        return false;
+    }else{
+        std::cout<<" --> new position = "<<new_pos<<std::endl;
+        return true;
+    }
+
+
+
+}
 
 bool Tests::runAll(){
     std::cout << "\033[1;35mRun all tests\n" << std::endl;
-    bool passed, contract, edge, face, stressEdge, stressFace;
-    passed = contract = edge = face = stressEdge = stressFace = false;
+    bool passed, contract, edge, face, stressEdge, stressFace, cheby;
+    passed = contract = edge = face = stressEdge = stressFace = cheby = false;
 
     contract    = t_EdgeContraction();
     edge        = t_EdgeRemoval();
 //    face        = t_FaceRemoval();
     stressEdge  = t_StressEdgeRemoval();
     stressFace  = t_StressFaceRemoval();
+    cheby       = t_chebyshev_centroid();
     passed =
             contract &&
             edge &&
             face &&
             stressEdge &&
-            stressFace
+            stressFace &&
+            cheby
             ;
     return passed;
 }

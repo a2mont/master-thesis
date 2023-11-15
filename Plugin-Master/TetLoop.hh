@@ -2,6 +2,8 @@
 #define TETLOOP_HH
 
 #include <ObjectTypes/TetrahedralMesh/TetrahedralMesh.hh>
+#include <CGAL/QP_models.h>
+#include <CGAL/QP_functions.h>
 
 #include "TopologicalLink.hh"
 #include "VertexDisplacement.hh"
@@ -17,6 +19,7 @@ class TetLoop
 public:
     TetLoop(TetrahedralMesh& _mesh, double _q_min, std::map<int,int>& _constraint_vhs, const bool _logs = false) :
         mesh_(_mesh),
+        cavityEdge_(mesh_.request_halfface_property<bool>("Cavity Edge")),
         constraint_vhs_(_constraint_vhs),
         includeLogs_(_logs),
         q_min_(_q_min)
@@ -37,6 +40,12 @@ public:
         Tet(CellHandle _cell_handle, double _quality): cell_handle_(_cell_handle), quality_(_quality){}
         std::string toString() const {return "Cell id: " + std::to_string(cell_handle_.idx()) + " Quality: " + std::to_string(quality_);}
     };
+    struct Star{
+        std::vector<CellHandle> tets_;
+        Star(std::vector<CellHandle> _tets) : tets_(_tets){}
+        Star(){}
+    };
+
     struct CompareQuality{
         bool operator()(Tet const& t1,Tet const& t2){
             return t1.quality_ > t2.quality_;
@@ -72,6 +81,8 @@ public:
     bool edgeRemoval(EdgeHandle _eh, bool _verbose = true);
     bool faceRemoval(FaceHandle _fh, bool _verbose = true);
     VertexHandle contractEdge(EdgeHandle _eh, std::vector<CellHandle>& _tetsAltered);
+    bool find_chebyshev_center(const std::vector<HalfFaceHandle> &constraint_hfs, const double radius_lower_bound, ACG::Vec3d &new_position);
+
     static void reset_queue(PriorityQueue& _queue);
     static void computeQuality(TetLoop::PriorityQueue &_queue, TetrahedralMesh &_mesh);
 private:
@@ -86,20 +97,26 @@ private:
 
     void log( Logger* _logger, bool _endOfLine = false);
     void computeQuality();
-    void multiFace(FaceHandle _fh);
+    void multiFace(FaceHandle _fh, std::vector<CellHandle>* const _cellsAdded);
     TestNeighborResult testNeighbor(VertexHandle a,
                       VertexHandle b,
                       VertexHandle u,
                       VertexHandle w);
     double orient3D(VertexHandle _a, VertexHandle _b, VertexHandle _c, VertexHandle _d);
-    void flip32Recurse(TetLoop::FaceWithChildren _g, TetLoop::FaceWithChildren _parent);
-    void flip32(EdgeHandle _eh);
-    void flip23(FaceHandle _fh);
+    void flip32Recurse(TetLoop::FaceWithChildren _g, TetLoop::FaceWithChildren _parent, std::vector<CellHandle>* const _cellsAdded);
+    void flip32(EdgeHandle _eh, std::vector<CellHandle>* const _cellsAdded);
+    void flip23(FaceHandle _fh, std::vector<CellHandle>* const _cellsAdded);
     void flip22(FaceHandle _fh, std::vector<CellHandle>* const _cellsAdded);
+
+    CellHandle findNextCell(Star _startStar);
+    void findCavityBoundary(std::vector<HalfFaceHandle> &_cavityBoundary);
+    void findCavityBoundary(std::vector<HalfFaceHandle> &_cavityBoundary, Star _constraint);
+    bool checkStarConditions(Star _star);
+    void triangle_normal_and_centroid(const HalfFaceHandle &hf, ACG::Vec3d &normal, ACG::Vec3d &centroid);
 
 private:
     TetrahedralMesh& mesh_;
-
+    HalfFacePropertyT<bool> cavityEdge_;
     PriorityQueue quality_queue_;
 
     Logger *logger_;

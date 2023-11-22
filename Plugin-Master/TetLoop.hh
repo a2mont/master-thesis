@@ -41,8 +41,18 @@ public:
         std::string toString() const {return "Cell id: " + std::to_string(cell_handle_.idx()) + " Quality: " + std::to_string(quality_);}
     };
     struct Star{
-        std::vector<CellHandle> tets_;
-        Star(std::vector<CellHandle> _tets) : tets_(_tets){}
+        ACG::Vec3d center_;
+        std::set<HalfFaceHandle> bounds_;
+        std::set<CellHandle> tets_;
+        Star(std::set<CellHandle> _tets) :
+            tets_(_tets){}
+        Star(std::set<CellHandle> _tets, std::set<HalfFaceHandle> _bounds) :
+            bounds_(_bounds),
+            tets_(_tets){}
+        Star(std::set<CellHandle> _tets, std::set<HalfFaceHandle> _bounds, ACG::Vec3d _center) :
+            center_(_center),
+            bounds_(_bounds),
+            tets_(_tets){}
         Star(){}
     };
 
@@ -108,10 +118,12 @@ private:
     void flip23(FaceHandle _fh, std::vector<CellHandle>* const _cellsAdded);
     void flip22(FaceHandle _fh, std::vector<CellHandle>* const _cellsAdded);
 
-    CellHandle findNextCell(Star _startStar);
-    void findCavityBoundary(std::vector<HalfFaceHandle> &_cavityBoundary);
-    void findCavityBoundary(std::vector<HalfFaceHandle> &_cavityBoundary, Star _constraint);
+    CellHandle findNextCell(Star& _startStar);
+    void findCavityBoundary(std::set<HalfFaceHandle> &_cavityBoundary);
+    void findCavityBoundary(std::set<HalfFaceHandle> &_cavityBoundary, Star _constraint);
     bool checkStarConditions(Star _star);
+    bool checkCenter(Star _star);
+    void createBoundaryMesh(std::set<HalfFaceHandle> &_cavityBoundary);
     void triangle_normal_and_centroid(const HalfFaceHandle &hf, ACG::Vec3d &normal, ACG::Vec3d &centroid);
 
 private:
@@ -127,10 +139,14 @@ private:
     std::string logsAddress_;
     const bool includeLogs_;
     const double q_min_;
+
+
     const std::string LOGS_BASE = "../../../../Plugin-Master/logs/3D/quality_logs_";
     const std::string LOGS_EXTENSION = ".csv";
     const std::string LOGS_STEP = "../../../../Plugin-Master/logs/3D/quality_timesteps_";
+    const std::string LOGS_MESH = "../../../../Plugin-Master/logs/meshes/";
 
+    static constexpr double CHEBY_THRESHOLD = 10e-2;
 };
 
 #endif // TETLOOP_HH

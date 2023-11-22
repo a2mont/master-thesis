@@ -16,8 +16,7 @@ double QualityEvaluation::evaluate(const OpenVolumeMesh::CellHandle _cell, Tetra
     for(auto vh: _mesh.get_cell_vertices(_cell)){
         vertices.push_back(vh);
     }
-
-    quality = computeQuality(_mesh, vertices[0], vertices[1], vertices[2], vertices[3], edge_lengths,_verbose);
+    quality = computeQuality(_mesh, vertices[0], vertices[1], vertices[2], vertices[3], edge_lengths, _verbose);
 
     return quality;
 }

@@ -14,7 +14,7 @@ public:
             file_ << _q_min << "\n";
             file_.close();
         }else
-            std::cout << "\033[1;4;33mFailed to open file !!\033[0m" << std::endl;
+            std::cout << "\033[1;4;33mFailed to open file "<<_filename<<"!!\033[0m" << std::endl;
     }
     ~Logger(){
         if(file_.is_open())

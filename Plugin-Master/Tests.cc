@@ -5,7 +5,7 @@
 bool Tests::t_EdgeRemoval()
 {
     std::cout << "\033[1;35m------------------------------"
-                 "\nEdge removal test\033[0m" << std::endl;
+                 "\nEdge removal test\n\033[0m" << std::endl;
     TetrahedralMesh mesh;
     TetLoop::PriorityQueue queue;
     EdgeHandle edgeToRemove;
@@ -46,23 +46,23 @@ bool Tests::t_EdgeRemoval()
     }
 
     if(qualityAfter <= qualityBefore){
-        std::cout << "\033[1;31m X Quality should improve after operation!\033[0m" << std::endl;
+        std::cout << "\033[1;31m X Quality should improve after operation!\n\033[0m" << std::endl;
         return false;
     }
     if(cellNb != 2){
-        std::cout << "\033[1;31m X Only 2 cells should remain!\033[0m" << std::endl;
+        std::cout << "\033[1;31m X Only 2 cells should remain!\n\033[0m" << std::endl;
         return false;
     }
 
     std::cout << "\033[1;32mPassed\033[0m\n"
-                 "\033[1;35m------------------------------\033[0m" << std::endl;
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
 
     return true;
 }
 
 bool Tests::t_StressEdgeRemoval(){
     std::cout << "\033[1;35m------------------------------"
-                 "\nEdge removal stress test\033[0m" << std::endl;
+                 "\nEdge removal stress test\n\033[0m" << std::endl;
 
     TetrahedralMesh mesh;
     std::map<int,int> cv = {{0,0}};
@@ -82,14 +82,14 @@ bool Tests::t_StressEdgeRemoval(){
     }
     std::cout << "# Reverts: " << reverts << "/" << iters << std::endl;
     std::cout << "\033[1;32mPassed\033[0m\n"
-                 "\033[1;35m------------------------------\033[0m" << std::endl;
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
 
     return true;
 }
 
 bool Tests::t_FaceRemoval(){
     std::cout << "\033[1;35m------------------------------"
-                 "\nFace removal test\033[0m"<< std::endl;
+                 "\nFace removal test\n\033[0m"<< std::endl;
     TetrahedralMesh mesh;
     TetLoop::PriorityQueue queue;
     int cellNb = 0;
@@ -123,22 +123,22 @@ bool Tests::t_FaceRemoval(){
     }
 
     if(qualityAfter <= qualityBefore){
-        std::cout << "\033[1;31m X Quality should improve after operation!\033[0m" << std::endl;
+        std::cout << "\033[1;31m X Quality should improve after operation!\n\033[0m" << std::endl;
         return false;
     }
     if(cellNb != 3){
-        std::cout << "\033[1;31m X Only 2 cells should remain!\033[0m" << std::endl;
+        std::cout << "\033[1;31m X Only 2 cells should remain!\n\033[0m" << std::endl;
         return false;
     }
 
     std::cout << "\033[1;32mPassed\033[0m\n"
-                 "\033[1;35m------------------------------\033[0m" << std::endl;
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
     return true;
 }
 
 bool Tests::t_StressFaceRemoval(){
     std::cout << "\033[1;35m------------------------------"
-                 "\nEdge removal stress test\033[0m" << std::endl;
+                 "\nEdge removal stress test\n\033[0m" << std::endl;
 
     TetrahedralMesh mesh;
     std::map<int,int> cv = {{0,0}};
@@ -162,19 +162,19 @@ bool Tests::t_StressFaceRemoval(){
 
     TetLoop::computeQuality(queue, mesh);
     if(queue.top().quality_ <= 10e-5){
-        std::cout << "\033[1;31m X creates inverted tets!\033[0m" << std::endl;
+        std::cout << "\033[1;31m X creates inverted tets!\n\033[0m" << std::endl;
         return false;
     }
     std::cout << "# Reverts: " << reverts << "/" << iters << std::endl;
     std::cout << "\033[1;32mPassed\033[0m\n"
-                 "\033[1;35m------------------------------\033[0m" << std::endl;
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
 
     return true;
 }
 
 bool Tests::t_EdgeContraction(){
     std::cout << "\033[1;35m------------------------------"
-                 "\nEdge contraction test\033[0m"<< std::endl;
+                 "\nEdge contraction test\n\033[0m"<< std::endl;
     TetrahedralMesh mesh;
     TetLoop::PriorityQueue queue;
     EdgeHandle edgeToRemove;
@@ -204,14 +204,14 @@ bool Tests::t_EdgeContraction(){
     }
 
     std::cout << "\033[1;32mPassed\033[0m\n"
-                 "\033[1;35m------------------------------\033[0m" << std::endl;
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
 
     return true;
 }
 
 bool Tests::t_chebyshev_centroid(){
     std::cout << "\033[1;35m------------------------------"
-                 "\nChebyshev center test\033[0m"<< std::endl;
+                 "\nChebyshev center test\n\033[0m"<< std::endl;
     TetrahedralMesh mesh;
 
     auto v0 = mesh.add_vertex({1.5, 1.5, -1}); //cluster virtual vertex
@@ -231,32 +231,60 @@ bool Tests::t_chebyshev_centroid(){
 
     std::map<int,int> cv = {{0,0}};
     TetLoop loop(mesh, 0.4, cv);
-    std::vector<HalfFaceHandle> hfs;
+    std::set<HalfFaceHandle> hfs;
     for(auto hf:mesh.halffaces()){
         if(mesh.is_boundary(hf)){
-            hfs.push_back(hf);
+            hfs.insert(hf);
         }
     }
 
     ACG::Vec3d new_pos;
-    auto cheb_result = loop.find_chebyshev_center(hfs, 1e-7, new_pos);
+    auto cheb_result = loop.find_chebyshev_center(hfs, TetLoop::CHEBY_THRESHOLD, new_pos, true);
 
-    if(cheb_result){
+    if(!cheb_result){
         std::cout<<" --> failed to find Chebyshev center"<<std::endl;
         return false;
-    }else{
-        std::cout<<" --> new position = "<<new_pos<<std::endl;
-        return true;
     }
 
+    std::cout<<" --> new position = "<<new_pos<<std::endl;
+    return true;
+}
+
+bool Tests::t_custom_chebyshev_centroid(std::string _filename){
+    std::cout << "\033[1;35m------------------------------"
+                 "\nChebyshev center test on file: "<< _filename <<"\n\033[0m"<< std::endl;
+    TetrahedralMesh mesh;
+
+    OpenVolumeMesh::IO::FileManager fileManager;
+    fileManager.readFile(LOGS_MESH + _filename, mesh);
 
 
+    std::map<int,int> cv = {{0,0}};
+    TetLoop loop(mesh, 0.5, cv);
+    std::set<HalfFaceHandle> hfs;
+    for(auto hf:mesh.halffaces()){
+        if(mesh.is_boundary(hf)){
+            hfs.insert(hf);
+        }
+    }
+    std::cout << "Bounds:\n" << TetLoop::iterableToString<std::set<HalfFaceHandle>>(hfs)<< std::endl;
+
+    ACG::Vec3d new_pos;
+    auto cheb_result = loop.find_chebyshev_center(hfs, TetLoop::CHEBY_THRESHOLD, new_pos, true);
+
+    if(!cheb_result){
+        std::cout<<" --> failed to find Chebyshev center"<<std::endl;
+        return false;
+    }
+
+    std::cout<<" --> new position = "<<new_pos<<std::endl;
+    return true;
 }
 
 bool Tests::runAll(){
     std::cout << "\033[1;35mRun all tests\n" << std::endl;
-    bool passed, contract, edge, face, stressEdge, stressFace, cheby;
-    passed = contract = edge = face = stressEdge = stressFace = cheby = false;
+    bool passed, contract, edge, face, stressEdge, stressFace, cheby, chebyCustom;
+    passed = contract = edge = face = stressEdge = stressFace = cheby = chebyCustom = false;
 
     contract    = t_EdgeContraction();
     edge        = t_EdgeRemoval();
@@ -264,13 +292,15 @@ bool Tests::runAll(){
     stressEdge  = t_StressEdgeRemoval();
     stressFace  = t_StressFaceRemoval();
     cheby       = t_chebyshev_centroid();
+    chebyCustom = t_custom_chebyshev_centroid();
     passed =
             contract &&
             edge &&
             face &&
             stressEdge &&
             stressFace &&
-            cheby
+            cheby &&
+            chebyCustom
             ;
     return passed;
 }

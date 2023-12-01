@@ -28,52 +28,9 @@ void TetLoop::loop(int _max_iter){
             log(logger_, true);
         reset_queue(quality_queue_);
     }
-//    computeQuality();
-//    while (!quality_queue_.empty()) {
-//        auto tet = quality_queue_.top();
-//        quality_queue_.pop();
-//        if(tet.quality_ < 10e-6){
-//            mesh_.delete_cell(tet.cell_handle_);
-//        }
-//    }
     if(includeLogs_)
         log(timeStepLogger_, true);
 
-}
-
-void TetLoop::computeQuality(){
-    reset_queue(quality_queue_);
-    for(auto c_it = mesh_.cells_begin(); c_it != mesh_.cells_end(); ++c_it){
-        if(!c_it->is_valid() || mesh_.is_deleted(*c_it)){
-            std::cout <<*c_it <<" is deleted" << std::endl;
-            continue;
-        }
-        double quality = QualityEvaluation::evaluate(*c_it, mesh_);
-//        std::cout << quality << std::endl;
-        quality_queue_.push(Tet(*c_it, quality));
-//        std::cout << "after" << std::endl;
-    }
-//    std::cout << "end" << std::endl;
-}
-void TetLoop::computeQuality(TetLoop::PriorityQueue& _queue, TetrahedralMesh& _mesh){
-    reset_queue(_queue);
-    for(auto c_it = _mesh.cells_begin(); c_it != _mesh.cells_end(); ++c_it){
-        double quality = QualityEvaluation::evaluate(*c_it, _mesh);
-        _queue.push(Tet(*c_it, quality));
-    }
-}
-
-void TetLoop::log(Logger* _logger, bool _endOfLine){
-    computeQuality();
-    _logger->logQuality(quality_queue_.top().quality_);
-    if(_endOfLine){
-        logger_->nextLine();
-    }
-}
-
-void TetLoop::reset_queue(TetLoop::PriorityQueue& _queue){
-    PriorityQueue empty;
-    std::swap(_queue, empty);
 }
 
 void TetLoop::improve_mesh(PriorityQueue _badTets){
@@ -671,18 +628,6 @@ VertexHandle TetLoop::contractEdge(EdgeHandle _eh, std::vector<CellHandle>& _tet
 // ----------- ** Insertion pass ** -----------------------
 
 void TetLoop::insertion_pass(PriorityQueue* _A){
-//    for each inverted tetrahedron 𝑐 ∈ 𝐶
-//    if 𝑐 ∉ 𝑆 for all 𝑆 ∈ G                     𝑐 not yet covered
-//    𝑆 ∗ = ⟨{𝑐}⟩                                spawn star at seed 𝑐
-//    do                                          growing
-//    Choose next tetrahedron 𝑐 ∗ by heuristic
-//    𝑆 ∗ = ⟨𝑆 ∗ ∪ {𝑐 ∗ } ⟩
-//    if 𝑐 ∗ ∈ 𝑆 for any 𝑆 ∈ G                   ⊲ star collision
-//    𝑆 ∗ = ⟨𝑆 ∗ ∪ 𝑆 ⟩                           ⊲ absorb other star
-//    G = G \ {𝑆 }
-//    while 𝑆 ∗ violates the star conditions
-//    G = G ∪ {𝑆 ∗ }
-//    return G
     bool saveMesh(true);
 
     for(auto hfh: mesh_.halffaces()){
@@ -690,15 +635,18 @@ void TetLoop::insertion_pass(PriorityQueue* _A){
     }
 
     std::vector<Star> galaxy;
+    CellHandle lastAdded(-1);
+    //    for each inverted tetrahedron 𝑐 ∈ 𝐶
     while(!_A->empty()){
         auto top = _A->top();
         _A->pop();
         auto ch = top.cell_handle_;
         if(mesh_.is_deleted(ch))
             continue;
-        int maxIter = 100;
+        int maxIter = 5000;
         bool covered = false;
 
+        //    if 𝑐 ∉ 𝑆 for all 𝑆 ∈ G                     𝑐 not yet covered
         for(auto star: galaxy){
             if(std::find(star.tets_.begin(), star.tets_.end(), ch) != star.tets_.end()){
                 covered = true;
@@ -708,48 +656,69 @@ void TetLoop::insertion_pass(PriorityQueue* _A){
         if(covered){
             continue;
         }
+        //    𝑆 ∗ = ⟨{𝑐}⟩                                spawn star at seed 𝑐
         Star newStar(std::set<CellHandle> {ch});
+        lastAdded = ch;
         for(auto hfh: mesh_.cell_halffaces(ch)){
+            auto opp = mesh_.opposite_halfface_handle(hfh);
             cavityEdge_[hfh] = true;
+            if(opp.is_valid()){
+                newStar.bounds_.insert(opp);
+            }
+        }
+        if(newStar.bounds_.size() == 4){
+            find_chebyshev_center(newStar.bounds_, CHEBY_THRESHOLD, newStar.center_);
+        }else{
+            std::cout <<
+                      "Error on initial cavity boundary size !!\n\tExpected: 4  Value: "
+                      << newStar.bounds_.size()<< std::endl;
         }
         do {
+            //    Choose next tetrahedron 𝑐∗ by heuristic
             auto next = findNextCell(newStar);
             if(next.is_valid()){
+                //    𝑆 ∗ = ⟨𝑆 ∗ ∪ {𝑐 ∗ } ⟩
                 newStar.tets_.insert(next);
+                lastAdded = next;
                 for(auto hfh: mesh_.cell_halffaces(next)){
                     cavityEdge_[hfh] = true;
                 }
                 // check for star collisions
-                std::set<int> toRemove;
+                std::set<int> toRemove({});
                 for(int i = 0; i < galaxy.size(); ++i){
                     auto star = galaxy[i];
-                    // check if the star has already been absorbed
-                    if(toRemove.find(i) == toRemove.end() && std::find(star.tets_.begin(), star.tets_.end(), next) != star.tets_.end()){
+                    // check for star collisions
+                    if(toRemove.find(i) == toRemove.end()
+                            && std::find(star.tets_.begin(), star.tets_.end(), next) != star.tets_.end()){
                         // absorb star
                         newStar.tets_.insert(star.tets_.begin(), star.tets_.end());
+                        std::cout << "Absorbtion !!!!!" << std::endl;
                         toRemove.insert(i);
+                        break;
                     }
                 }
+                //    G = G \ {𝑆 }
                 for(int id: toRemove){
                     galaxy.erase(galaxy.begin() + id);
                 }
-//                std::cout << "Boundary: "<< newStar.bounds_.size() << std::endl;
             }
         // star conditions -> centre de chebyshev + injectivity check (* shaped dans 2 domaines)
-        } while (checkStarConditions(newStar) && maxIter-- > 0);
-//        std::cout << "Boundary: "<< newStar.bounds_.size() << std::endl;
+        } while (checkStarConditions(newStar, lastAdded) && maxIter-- > 0);
+        //    G = G ∪ {𝑆 ∗ }
+//        std::cout << "Loop ended with star: " << std::endl;
+//        newStar.describe();
         galaxy.push_back(newStar);
 
     }
 
     for(auto star: galaxy){
-//        std::cout << "Center: "<< star.center_ << std::endl;
         if(!checkCenter(star)){
             std::cout << "Center of star check failed" << std::endl;
+//            star.describe();
             if(saveMesh){
-                createBoundaryMesh(star.bounds_);
+//                createBoundaryMesh(star.bounds_);
+                cavityMesh3D(star);
             }
-            continue;
         }
         for(auto ch: star.tets_){
             if(mesh_.is_deleted(ch)){
@@ -759,7 +728,38 @@ void TetLoop::insertion_pass(PriorityQueue* _A){
             mesh_.delete_cell(ch);
         }
     }
-
+    // Ensure that no unlinked elements remain
+    auto temp = mesh_;
+    for(auto fh: temp.faces()){
+        int adjacentCells = 0;
+        for(auto f_ch:mesh_.face_cells(fh)){
+            ++adjacentCells;
+        }
+        if(adjacentCells == 0){
+//            std::cout << "Low valence !!! Face: "<< fh << std::endl;
+            mesh_.delete_face(fh);
+        }
+    }
+    for(auto eh: temp.edges()){
+        int adjacentCells = 0;
+        for(auto f_ch:mesh_.edge_cells(eh)){
+            ++adjacentCells;
+        }
+        if(adjacentCells == 0){
+//            std::cout << "Low valence !!! Edge: "<< eh << std::endl;
+            mesh_.delete_edge(eh);
+        }
+    }
+    for(auto vh: temp.vertices()){
+        int adjacentCells = 0;
+        for(auto f_ch:mesh_.vertex_cells(vh)){
+            ++adjacentCells;
+        }
+        if(adjacentCells == 0){
+//            std::cout << "Low valence !!! Vertex: "<< vh << std::endl;
+            mesh_.delete_vertex(vh);
+        }
+    }
     // Remplir la galaxy
     // for each star
     // 1. compute center of cheby and add point
@@ -771,8 +771,9 @@ void TetLoop::insertion_pass(PriorityQueue* _A){
             if(mesh_.is_deleted(bound))
                 continue;
             auto vertices = mesh_.get_halfface_vertices(bound);
+            // order = 0,2,1 since boundary is facing opposite to the cavity
             auto added = mesh_.add_cell(vertices[0], vertices[2], vertices[1], newVertex);
-//            std::cout << "Added cell "<< added << " Valid: "<< added.is_valid() << std::endl;
+
         }
 
     }
@@ -791,19 +792,93 @@ void TetLoop::createBoundaryMesh(std::set<HalfFaceHandle>& _cavityBoundary){
         }
         mesh.add_face(om_vertexHandles);
     }
+    mesh.garbage_collection();
     OpenMesh::IO::write_mesh(mesh, LOGS_MESH + "mesh_dump" + std::to_string(id++) + ".obj");
-
 }
+
+void TetLoop::cavityMesh3D(Star _star){
+    static int id = 0;
+    int vertexId = 0;
+    bool printDebug(false);
+    std::set<CellHandle> toAdd;
+    TetrahedralMesh copy;
+    std::set<VertexHandle> vertices;
+    std::map<VertexHandle,VertexHandle> table;
+    for(auto ch: _star.tets_){
+        toAdd.insert(ch);
+    }
+    for(auto ch: toAdd){
+        auto verts = mesh_.get_cell_vertices(ch);
+        for(auto vh: verts){
+            if(vertices.find(vh) == vertices.end()){
+                copy.add_vertex(mesh_.vertex(vh));
+                vertices.insert(vh);
+                table[vh] = VertexHandle(vertexId++);
+            }
+        }
+
+    }
+    for(auto ch: toAdd){
+        auto verts = mesh_.get_cell_vertices(ch);
+        copy.add_cell(
+                    table[verts[0]],
+                    table[verts[1]],
+                    table[verts[2]],
+                    table[verts[3]]);
+    }
+    if(printDebug){
+        std::cout << "Copy with:\n\t-"<<
+                     copy.n_cells() << " cells,\n\t-"<<
+                     copy.n_faces() << " faces,\n\t-"<<
+                     copy.n_edges() << " edges,\n\t-"<<
+                     copy.n_vertices()<< " vertices"
+                  << std::endl;
+    }
+    copy.collect_garbage();
+    OpenVolumeMesh::IO::FileManager fm;
+    std::string name = "mesh_dump" + std::to_string(id++) + "_3D.ovm";
+    fm.writeFile(LOGS_MESH + name, copy);
+    std::cout << "Created file "<< name << std::endl;
+    compareStarWithMesh(_star, copy);
+}
+
+void TetLoop::compareStarWithMesh(Star& _star, TetrahedralMesh& _mesh){
+    findCavityBoundary(_star);
+    find_chebyshev_center(_star.bounds_, CHEBY_THRESHOLD, _star.center_, true);
+
+    std::set<HalfFaceHandle> hfs;
+    for(auto hf:_mesh.halffaces()){
+        if(_mesh.is_boundary(hf)){
+            hfs.insert(hf);
+        }
+    }
+    ACG::Vec3d new_pos;
+    std::cout << "\n" << std::endl;
+    find_chebyshev_center(_mesh, hfs, CHEBY_THRESHOLD, new_pos, true);
+
+    std::cout << "Comparison between star and mesh:\n-Star\n\t-Center = " <<
+              _star.center_ << "\n\t-Bounds = "<<
+              iterableToString<std::set<HalfFaceHandle>>(_star.bounds_) << "\n\t-Tets = " <<
+              iterableToString<std::set<CellHandle>>(_star.tets_) << "\n-Mesh\n\t-Center = "<<
+              new_pos << "\n\t-Bounds = "<<
+              iterableToString<std::set<HalfFaceHandle>>(hfs) << "\n\t-Tets = " <<
+              iterableToString<std::pair<CellIter, CellIter>>(_mesh.cells())
+              << std::endl;
+}
+
+
 
 bool TetLoop::checkCenter(Star _star){
     bool pass(false);
-    double treshold = 1;
+    double treshold = 2;
     double dist = 0;
-    double averageDist = 10;
+    double averageDist = 100;
     for(auto hfh: _star.bounds_){
-        auto face = mesh_.face_handle(hfh);
-        auto barycenter = mesh_.barycenter(face);
-        dist += (barycenter - _star.center_).norm();
+        auto faceVertices = mesh_.get_halfface_vertices(hfh);
+        auto centroid = (mesh_.vertex(faceVertices[0]) +
+                           mesh_.vertex(faceVertices[1]) +
+                           mesh_.vertex(faceVertices[2]))/3.f;
+        dist += (centroid - _star.center_).norm();
     }
     averageDist = dist / _star.bounds_.size();
 //    std::cout << "Average dist: " << averageDist << std::endl;
@@ -813,68 +888,66 @@ bool TetLoop::checkCenter(Star _star){
 
 }
 
-bool TetLoop::checkStarConditions(Star _star){
+bool TetLoop::checkStarConditions(Star& _star, CellHandle _lastAdded){
     bool isValid(false);
-    _star.bounds_.clear();
-    findCavityBoundary(_star.bounds_, _star);
-    std::vector<HalfFaceHandle> bounds(_star.bounds_.begin(), _star.bounds_.end());
-    isValid = find_chebyshev_center(bounds, CHEBY_THRESHOLD, _star.center_);
+    findCavityBoundary(_star);
+    isValid = find_chebyshev_center(_star.bounds_, CHEBY_THRESHOLD, _star.center_);
 //    std::cout << "Center: "<< _star.center_ <<"\nBounds: "<< _star.bounds_.size() << std::endl;
+    if(!isValid){
+        std::cout << "Cheby check failed, revert to previous values" << std::endl;
+        _star.tets_.erase(_lastAdded);
+        findCavityBoundary(_star);
+        find_chebyshev_center(_star.bounds_, CHEBY_THRESHOLD, _star.center_);
+    }
 
     return isValid;
 
 }
 
 void TetLoop::findCavityBoundary(std::set<HalfFaceHandle>& _cavityBoundary){
+    _cavityBoundary.clear();
     for(auto hfh: mesh_.halffaces()){
         auto opp = mesh_.opposite_halfface_handle(hfh);
         if(cavityEdge_[hfh] && !cavityEdge_[opp] && opp.is_valid()){
             _cavityBoundary.insert(opp);
         }
+        if(!opp.is_valid()){
+            std::cout << "Opp non valid ! "<< hfh << std::endl;
+        }
 
     }
 
 }
 
-void TetLoop::findCavityBoundary(std::set<HalfFaceHandle>& _cavityBoundary, Star _constraint){
+void TetLoop::findCavityBoundary(Star& _constraint){
+    _constraint.bounds_.clear();
     for(auto tet: _constraint.tets_){
-        for(auto ch: mesh_.cell_cells(tet)){
-            for(auto hfh: mesh_.cell_halffaces(ch)){
-                auto opp = mesh_.opposite_halfface_handle(hfh);
-                if(cavityEdge_[hfh] && !cavityEdge_[opp] && opp.is_valid()){
-                    _cavityBoundary.insert(opp);
-                }
-            }
-        }
-    }
-    // This means that only the cavity is composed of one cell only
-    if(_cavityBoundary.size() == 0 && _constraint.tets_.size() == 1){
-        for(auto hfh: mesh_.cell_halffaces(*_constraint.tets_.begin())){
+        for(auto hfh: mesh_.cell_halffaces(tet)){
             auto opp = mesh_.opposite_halfface_handle(hfh);
-            // Additional security check
-            if(cavityEdge_[hfh] && opp.is_valid()){
-                _cavityBoundary.insert(opp);
+            // cavityEdge_[hfh] should always be true, since it is part of a star
+            if(cavityEdge_[hfh] && !cavityEdge_[opp] && opp.is_valid()){
+                _constraint.bounds_.insert(opp);
+            }
+            if(!opp.is_valid()){
+                std::cout << "Opp non valid ! "<< hfh << std::endl;
             }
         }
-
     }
-
 }
 
 CellHandle TetLoop::findNextCell(Star& _startStar){
     bool printDebug(false);
     CellHandle nextCell(-1);
-    _startStar.bounds_.clear();
-    findCavityBoundary(_startStar.bounds_, _startStar);
-    std::vector<HalfFaceHandle> bounds(_startStar.bounds_.begin(), _startStar.bounds_.end());
-    find_chebyshev_center(bounds, CHEBY_THRESHOLD, _startStar.center_);
 
     int max = -1;
     HalfFaceHandle bestCandidate(-1);
     for(auto hfh: _startStar.bounds_){
         double f_star = -1;
+        auto faceVertices = mesh_.get_halfface_vertices(hfh);
         auto normal = mesh_.normal(hfh);
-        auto a = mesh_.barycenter(mesh_.face_handle(hfh));
+        auto a = (mesh_.vertex(faceVertices[0]) +
+                  mesh_.vertex(faceVertices[1]) +
+                  mesh_.vertex(faceVertices[2]))/3.f;
         f_star = normal.dot(_startStar.center_) - normal.dot(a);
         if(f_star > max){
             bestCandidate = hfh;
@@ -903,8 +976,8 @@ CellHandle TetLoop::findNextCell(Star& _startStar){
 
 void TetLoop::triangle_normal_and_centroid(const HalfFaceHandle& hf,
                                  ACG::Vec3d& normal,
-                                 ACG::Vec3d& centroid){
-
+                                 ACG::Vec3d& centroid,
+                                 bool printDebug){
     auto face_vertices = mesh_.get_halfface_vertices(hf);
     auto c_evi  = mesh_.vertex(face_vertices[1]) - mesh_.vertex(face_vertices[0]);
     auto c_evi1 = mesh_.vertex(face_vertices[2]) - mesh_.vertex(face_vertices[0]);
@@ -920,15 +993,22 @@ void TetLoop::triangle_normal_and_centroid(const HalfFaceHandle& hf,
     centroid = (mesh_.vertex(face_vertices[0]) +
                 mesh_.vertex(face_vertices[1]) +
                 mesh_.vertex(face_vertices[2]))/3.f;
+    if(printDebug){
+        std::cout << "--------- checking halfface "<< hf << " (verts: "<<
+                     face_vertices[0]<< " "<<
+                     face_vertices[1]<< " " <<
+                     face_vertices[2]<<
+                     ")\n - normal = "<< normal <<
+                     "\n - centroid = "<< centroid<< std::endl;
+    }
 
 }
 
 
-bool TetLoop::find_chebyshev_center(const std::vector<HalfFaceHandle>& constraint_hfs,
+bool TetLoop::find_chebyshev_center(const std::set<HalfFaceHandle>& constraint_hfs,
                           const double radius_lower_bound,
-                          ACG::Vec3d& new_position){
-
-    bool print_debug(false);
+                          ACG::Vec3d& new_position,
+                          bool printDebug){
 
     new_position = {0,0,0};
 
@@ -953,7 +1033,7 @@ bool TetLoop::find_chebyshev_center(const std::vector<HalfFaceHandle>& constrain
             ACG::Vec3d normal, centroid;
 
             triangle_normal_and_centroid(hf,
-                                         normal, centroid);
+                                         normal, centroid, printDebug);
 
             auto b = normal.dot(centroid);
 
@@ -970,7 +1050,7 @@ bool TetLoop::find_chebyshev_center(const std::vector<HalfFaceHandle>& constrain
     }
 
 
-    if(print_debug){
+    if(printDebug){
         std::cout<<" - added "<<n_constraints<<" constraints "<<std::endl;
     }
 
@@ -1006,7 +1086,132 @@ bool TetLoop::find_chebyshev_center(const std::vector<HalfFaceHandle>& constrain
 
 
     if(s.is_infeasible() || s.is_unbounded() || !s.is_valid()){
-        if(print_debug){
+        if(printDebug){
+            std::cout<<" --> infeasible: "<<s.is_infeasible()<<std::endl;
+            std::cout<<" -->  unbounded: "<<s.is_unbounded()<<std::endl;
+            std::cout<<" -->      valid: "<<s.is_valid()<<std::endl;
+        }
+        return false;
+    }
+
+    return true;
+
+}
+
+void TetLoop::triangle_normal_and_centroid(const TetrahedralMesh& _mesh,
+                                 const HalfFaceHandle& hf,
+                                 ACG::Vec3d& normal,
+                                 ACG::Vec3d& centroid,
+                                 bool printDebug){
+    auto face_vertices = _mesh.get_halfface_vertices(hf);
+    auto c_evi  = _mesh.vertex(face_vertices[1]) - _mesh.vertex(face_vertices[0]);
+    auto c_evi1 = _mesh.vertex(face_vertices[2]) - _mesh.vertex(face_vertices[0]);
+
+
+    normal = (c_evi.cross(c_evi1));
+
+    auto normal_norm = normal.norm();
+    if(normal_norm){
+        normal /= normal_norm;
+    }
+
+    centroid = (_mesh.vertex(face_vertices[0]) +
+                _mesh.vertex(face_vertices[1]) +
+                _mesh.vertex(face_vertices[2]))/3.f;
+    if(printDebug){
+        std::cout << "--------- checking halfface "<< hf << " (verts: "<<
+                     face_vertices[0]<< " "<<
+                     face_vertices[1]<< " " <<
+                     face_vertices[2]<<
+                     ")\n - normal = "<< normal <<
+                     "\n - centroid = "<< centroid<< std::endl;
+    }
+
+}
+
+bool TetLoop::find_chebyshev_center(const TetrahedralMesh& _mesh,
+                          const std::set<HalfFaceHandle>& constraint_hfs,
+                          const double radius_lower_bound,
+                          ACG::Vec3d& new_position,
+                          bool printDebug){
+
+    new_position = {0,0,0};
+
+    using Program  = CGAL::Quadratic_program<double>;
+    using Solution = CGAL::Quadratic_program_solution<double>;
+
+    int max_precision(0);
+    int n_constraints(0);
+
+    CGAL::Quadratic_program_options options;
+    options.set_pricing_strategy(CGAL::QP_BLAND);     // Bland's rule
+
+    //create solver
+    // by default, we have an LP with Ax <= b
+    Program lp(CGAL::SMALLER, false, 0, false, 0);
+
+    // now set the non-default entries
+    const int X(0), Y(1), Z(2), R(3);
+
+    for(auto hf: constraint_hfs){
+
+            ACG::Vec3d normal, centroid;
+
+            triangle_normal_and_centroid(_mesh,hf,
+                                         normal, centroid, printDebug);
+
+            auto b = normal.dot(centroid);
+
+            //Ai^T . x + |Ai| . r <= Bi
+            lp.set_a(X, n_constraints, normal[0]);
+            lp.set_a(Y, n_constraints, normal[1]);
+            lp.set_a(Z, n_constraints, normal[2]);
+
+            lp.set_a(R, n_constraints, norm(normal));
+
+            lp.set_b(n_constraints, b);
+
+            n_constraints++;
+    }
+
+
+    if(printDebug){
+        std::cout<<" - added "<<n_constraints<<" constraints "<<std::endl;
+    }
+
+
+    //r >= 0
+    lp.set_l(R, true, radius_lower_bound);
+
+    // Objective function: -r = (0x + 0y + 0z - 1r)
+    lp.set_c(X,  0);
+    lp.set_c(Y,  0);
+    lp.set_c(Z,  0);
+    lp.set_c(R, -1);
+
+
+    //solve LP
+
+    //std::cout<<" - about to solve system..."<<std::endl;
+    Solution s = CGAL::solve_linear_program(lp, double(), options);
+
+    double radius;
+    int i(0);
+    for(auto val_it = s.variable_values_begin(); val_it != s.variable_values_end(); val_it++){
+
+        double sol_value = (val_it->numerator()/ val_it->denominator());
+
+        if(i<3){
+            new_position[i] = sol_value;
+        }else{
+            radius = sol_value;
+        }
+        i++;
+    }
+
+
+    if(s.is_infeasible() || s.is_unbounded() || !s.is_valid()){
+        if(printDebug){
             std::cout<<" --> infeasible: "<<s.is_infeasible()<<std::endl;
             std::cout<<" -->  unbounded: "<<s.is_unbounded()<<std::endl;
             std::cout<<" -->      valid: "<<s.is_valid()<<std::endl;
@@ -1040,4 +1245,71 @@ void TetLoop::smoothing_pass(PriorityQueue* _A, int _iterations){
             }
         }
     }
+}
+
+// ----------- ** Debugging and tools ** -------------------
+
+void TetLoop::computeQuality(){
+    reset_queue(quality_queue_);
+    for(auto c_it = mesh_.cells_begin(); c_it != mesh_.cells_end(); ++c_it){
+        if(!c_it->is_valid() || mesh_.is_deleted(*c_it)){
+            std::cout <<*c_it <<" is deleted" << std::endl;
+            continue;
+        }
+        double quality = QualityEvaluation::evaluate(*c_it, mesh_);
+//        std::cout << quality << std::endl;
+        quality_queue_.push(Tet(*c_it, quality));
+//        std::cout << "after" << std::endl;
+    }
+//    std::cout << "end" << std::endl;
+}
+
+void TetLoop::computeQuality(TetLoop::PriorityQueue& _queue, TetrahedralMesh& _mesh){
+    reset_queue(_queue);
+    for(auto c_it = _mesh.cells_begin(); c_it != _mesh.cells_end(); ++c_it){
+        double quality = QualityEvaluation::evaluate(*c_it, _mesh);
+        _queue.push(Tet(*c_it, quality));
+    }
+}
+
+void TetLoop::log(Logger* _logger, bool _endOfLine){
+    computeQuality();
+    _logger->logQuality(quality_queue_.top().quality_);
+    if(_endOfLine){
+        logger_->nextLine();
+    }
+}
+
+void TetLoop::reset_queue(TetLoop::PriorityQueue& _queue){
+    PriorityQueue empty;
+    std::swap(_queue, empty);
+}
+
+/**
+ * @brief Prints any iterable element with cout
+ * @param _toPrint: Iterable to print
+ * @param _eol: Should the print end with a line break (optional, default to false)
+ */
+template <typename T>void TetLoop::printIterable(T _toPrint, bool _eol){
+    for(auto elem: _toPrint){
+        std::cout << elem << ", ";
+    }
+
+    if(_eol){
+        std::cout << std::endl;
+    }
+}
+
+/**
+ * @brief Converts an iterable to a string
+ * @param _toPrint: Iterable to convert
+ * @return A string of form: "x_0, x_1, ..., x_n"
+ */
+template <typename T> std::string TetLoop::iterableToString(T _toPrint){
+    std::string result("");
+    for(auto elem: _toPrint){
+        result.append(std::to_string(elem.idx()) + ", ");
+    }
+    result = result.substr(0, result.size()-2);
+    return result;
 }

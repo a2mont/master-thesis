@@ -1,0 +1,237 @@
+Center of star check failed
+Created file mesh_dump0_3D.ovm
+--------- checking halfface 4353 (verts: 214 249 244)
+ - normal = -0.0144937 -0.887144 0.461265
+ - centroid = -0.845317 2.30873 -5.66667
+--------- checking halfface 4355 (verts: 214 250 249)
+ - normal = -0.676172 0.698633 -0.233888
+ - centroid = -1.07714 2.54825 -5.66667
+--------- checking halfface 4359 (verts: 244 249 250)
+ - normal = 0 0 -1
+ - centroid = -0.668509 2.36826 -6
+--------- checking halfface 5401 (verts: 214 244 251)
+ - normal = 0.629346 -0.0102821 0.777058
+ - centroid = -0.366275 2.77237 -5.66667
+--------- checking halfface 5403 (verts: 214 251 250)
+ - normal = -0.676172 0.698633 -0.233888
+ - centroid = -0.598095 3.01189 -5.66667
+--------- checking halfface 5405 (verts: 251 244 250)
+ - normal = 0 0 -1
+ - centroid = -0.189467 2.8319 -6
+ - added 6 constraints 
+
+
+--------- checking halfface 1 (verts: 0 2 1)
+ - normal = -0.0144937 -0.887144 0.461265
+ - centroid = -0.845317 2.30873 -5.66667
+--------- checking halfface 3 (verts: 0 3 2)
+ - normal = -0.676172 0.698633 -0.233888
+ - centroid = -1.07714 2.54825 -5.66667
+--------- checking halfface 7 (verts: 1 2 3)
+ - normal = 0 0 -1
+ - centroid = -0.668509 2.36826 -6
+--------- checking halfface 9 (verts: 0 1 4)
+ - normal = 0.629346 -0.0102821 0.777058
+ - centroid = -0.366275 2.77237 -5.66667
+--------- checking halfface 11 (verts: 0 4 3)
+ - normal = -0.676172 0.698633 -0.233888
+ - centroid = -0.598095 3.01189 -5.66667
+--------- checking halfface 13 (verts: 4 1 3)
+ - normal = 0 0 -1
+ - centroid = -0.189467 2.8319 -6
+ - added 6 constraints 
+Comparison between star and mesh:
+-Star
+	-Center = -3.78042 3.21743 -6.86276
+	-Bounds = 4353, 4355, 4359, 5401, 5403, 5405
+	-Tets = 978, 1225
+-Mesh
+	-Center = -3.78042 3.21743 -6.86276
+	-Bounds = 1, 3, 7, 9, 11, 13
+	-Tets = 0, 1
+
+
+
+Center of star check failed
+Created file mesh_dump1_3D.ovm
+--------- checking halfface 4393 (verts: 286 321 316)
+ - normal = -0.346225 -0.816923 0.461265
+ - centroid = 0.0824728 2.45723 -7.66667
+--------- checking halfface 4395 (verts: 286 322 321)
+ - normal = -0.36472 0.901263 -0.233888
+ - centroid = -0.0425686 2.76622 -7.66667
+--------- checking halfface 4399 (verts: 316 321 322)
+ - normal = 0 0 -1
+ - centroid = 0.268701 2.44609 -8
+--------- checking halfface 5441 (verts: 286 316 323)
+ - normal = 0.57953 -0.245614 0.777058
+ - centroid = 0.700456 2.70731 -7.66667
+--------- checking halfface 5443 (verts: 286 323 322)
+ - normal = -0.36472 0.901264 -0.233887
+ - centroid = 0.575414 3.01631 -7.66667
+--------- checking halfface 5445 (verts: 323 316 322)
+ - normal = 0 0 -1
+ - centroid = 0.886684 2.69617 -8
+ - added 6 constraints 
+
+
+--------- checking halfface 1 (verts: 0 2 1)
+ - normal = -0.346225 -0.816923 0.461265
+ - centroid = 0.0824728 2.45723 -7.66667
+--------- checking halfface 3 (verts: 0 3 2)
+ - normal = -0.36472 0.901263 -0.233888
+ - centroid = -0.0425686 2.76622 -7.66667
+--------- checking halfface 7 (verts: 1 2 3)
+ - normal = 0 0 -1
+ - centroid = 0.268701 2.44609 -8
+--------- checking halfface 9 (verts: 0 1 4)
+ - normal = 0.57953 -0.245614 0.777058
+ - centroid = 0.700456 2.70731 -7.66667
+--------- checking halfface 11 (verts: 0 4 3)
+ - normal = -0.36472 0.901264 -0.233887
+ - centroid = 0.575414 3.01631 -7.66667
+--------- checking halfface 13 (verts: 4 1 3)
+ - normal = 0 0 -1
+ - centroid = 0.886684 2.69617 -8
+ - added 6 constraints 
+Comparison between star and mesh:
+-Star
+	-Center = -3.17397 4.99543 -5.5037
+	-Bounds = 4393, 4395, 4399, 5441, 5443, 5445
+	-Tets = 988, 1235
+-Mesh
+	-Center = -3.17397 4.99543 -5.5037
+	-Bounds = 1, 3, 7, 9, 11, 13
+	-Tets = 0, 1
+
+
+Center of star check failed
+Created file mesh_dump2_3D.ovm
+--------- checking halfface 3574 (verts: 292 298 297)
+ - normal = 0 0 1
+ - centroid = 1.7692 -1.26181 -8
+--------- checking halfface 3583 (verts: 297 334 292)
+ - normal = -0.373579 -0.881465 -0.288892
+ - centroid = 1.70448 -1.38113 -8.33333
+--------- checking halfface 3585 (verts: 297 298 334)
+ - normal = -0.363143 0.897368 -0.250714
+ - centroid = 1.57944 -1.07214 -8.33333
+--------- checking halfface 4616 (verts: 299 298 292)
+ - normal = 0 0 1
+ - centroid = 2.38718 -1.01173 -8
+--------- checking halfface 4639 (verts: 299 334 298)
+ - normal = -0.363143 0.897368 -0.250714
+ - centroid = 2.19742 -0.822054 -8.33333
+--------- checking halfface 4642 (verts: 292 329 299)
+ - normal = 0.774808 -0.328376 0.540224
+ - centroid = 2.71335 -1.39454 -8.33333
+--------- checking halfface 4648 (verts: 292 334 329)
+ - normal = -0.552481 -0.81958 -0.151832
+ - centroid = 2.33963 -1.6389 -8.66667
+--------- checking halfface 4655 (verts: 299 335 334)
+ - normal = -0.170544 0.876065 -0.451027
+ - centroid = 2.45989 -0.87768 -8.66667
+--------- checking halfface 4657 (verts: 299 329 335)
+ - normal = 0.954349 0.185783 -0.233887
+ - centroid = 2.85077 -1.14118 -8.66667
+--------- checking halfface 4659 (verts: 329 334 335)
+ - normal = 0 0 -1
+ - centroid = 2.47706 -1.38554 -9
+ - added 10 constraints 
+
+
+--------- checking halfface 1 (verts: 0 2 1)
+ - normal = -0.373579 -0.881465 -0.288892
+ - centroid = 1.70448 -1.38113 -8.33333
+--------- checking halfface 3 (verts: 0 3 2)
+ - normal = -0.363143 0.897368 -0.250714
+ - centroid = 1.57944 -1.07214 -8.33333
+--------- checking halfface 5 (verts: 0 1 3)
+ - normal = -0 0 1
+ - centroid = 1.7692 -1.26181 -8
+--------- checking halfface 11 (verts: 1 4 3)
+ - normal = 0 -0 1
+ - centroid = 2.38718 -1.01173 -8
+--------- checking halfface 13 (verts: 4 2 3)
+ - normal = -0.363143 0.897368 -0.250714
+ - centroid = 2.19742 -0.822054 -8.33333
+--------- checking halfface 17 (verts: 4 6 2)
+ - normal = -0.170544 0.876065 -0.451027
+ - centroid = 2.45989 -0.87768 -8.66667
+--------- checking halfface 19 (verts: 4 5 6)
+ - normal = 0.954349 0.185783 -0.233887
+ - centroid = 2.85077 -1.14118 -8.66667
+--------- checking halfface 21 (verts: 5 2 6)
+ - normal = 0 0 -1
+ - centroid = 2.47706 -1.38554 -9
+--------- checking halfface 23 (verts: 1 5 4)
+ - normal = 0.774808 -0.328376 0.540224
+ - centroid = 2.71335 -1.39454 -8.33333
+--------- checking halfface 25 (verts: 1 2 5)
+ - normal = -0.552481 -0.81958 -0.151832
+ - centroid = 2.33963 -1.6389 -8.66667
+ - added 10 constraints 
+Comparison between star and mesh:
+-Star
+	-Center = 9.05651 -7.75875 -13.3139
+	-Bounds = 3574, 3583, 3585, 4616, 4639, 4642, 4648, 4655, 4657, 4659
+	-Tets = 791, 1040, 1043, 1044
+-Mesh
+	-Center = 9.05651 -7.75875 -13.3139
+	-Bounds = 1, 3, 5, 11, 13, 17, 19, 21, 23, 25
+	-Tets = 0, 1, 2, 3
+
+
+Center of star check failed
+Created file mesh_dump3_3D.ovm
+--------- checking halfface 5174 (verts: 167 173 172)
+ - normal = 0 0 1
+ - centroid = -0.188651 2.45356 -4
+--------- checking halfface 5183 (verts: 172 209 167)
+ - normal = 0.319354 -0.827797 -0.461264
+ - centroid = -0.00215929 2.45861 -4.33333
+--------- checking halfface 5187 (verts: 167 209 173)
+ - normal = 0.393967 0.888869 0.233887
+ - centroid = 0.132909 2.76336 -4.33333
+--------- checking halfface 5378 (verts: 173 179 172)
+ - normal = 0 0 1
+ - centroid = -0.798135 2.7237 -4
+--------- checking halfface 5385 (verts: 172 179 209)
+ - normal = -0.587245 -0.226551 -0.777057
+ - centroid = -0.611643 2.72875 -4.33333
+--------- checking halfface 5387 (verts: 173 209 179)
+ - normal = 0.393967 0.888869 0.233887
+ - centroid = -0.476574 3.03349 -4.33333
+ - added 6 constraints 
+
+
+--------- checking halfface 1 (verts: 0 2 1)
+ - normal = 0.319354 -0.827797 -0.461264
+ - centroid = -0.00215929 2.45861 -4.33333
+--------- checking halfface 5 (verts: 0 1 3)
+ - normal = 0 0 1
+ - centroid = -0.188651 2.45356 -4
+--------- checking halfface 7 (verts: 1 2 3)
+ - normal = 0.393967 0.888869 0.233887
+ - centroid = 0.132909 2.76336 -4.33333
+--------- checking halfface 9 (verts: 0 4 2)
+ - normal = -0.587245 -0.226551 -0.777057
+ - centroid = -0.611643 2.72875 -4.33333
+--------- checking halfface 11 (verts: 0 3 4)
+ - normal = 0 -0 1
+ - centroid = -0.798135 2.7237 -4
+--------- checking halfface 13 (verts: 3 2 4)
+ - normal = 0.393967 0.888869 0.233887
+ - centroid = -0.476574 3.03349 -4.33333
+ - added 6 constraints 
+Comparison between star and mesh:
+-Star
+	-Center = 5.42447 8.95596 -4.99723
+	-Bounds = 5174, 5183, 5187, 5378, 5385, 5387
+	-Tets = 1171, 1221
+-Mesh
+	-Center = 5.42447 8.95596 -4.99723
+	-Bounds = 1, 5, 7, 9, 11, 13
+	-Tets = 0, 1
+
+

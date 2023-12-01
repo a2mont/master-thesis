@@ -11,6 +11,7 @@
 #include "Smoothing.hh"
 #include "Logger.hh"
 #include "eigen3/Eigen/Dense"
+#include "OpenVolumeMesh/FileManager/FileManager.hh"
 
 using namespace OpenVolumeMesh;
 
@@ -54,6 +55,12 @@ public:
             bounds_(_bounds),
             tets_(_tets){}
         Star(){}
+        void describe() const {std::cout << "Star with:\n\t-Center: "<<
+                                         center_ << "\n\t-Bounds: " <<
+                                         iterableToString<std::set<HalfFaceHandle>>(bounds_) << "\n\t-Tets: "<<
+                                         iterableToString<std::set<CellHandle>>(tets_)
+                                         << std::endl;
+                                }
     };
 
     struct CompareQuality{
@@ -91,10 +98,25 @@ public:
     bool edgeRemoval(EdgeHandle _eh, bool _verbose = true);
     bool faceRemoval(FaceHandle _fh, bool _verbose = true);
     VertexHandle contractEdge(EdgeHandle _eh, std::vector<CellHandle>& _tetsAltered);
-    bool find_chebyshev_center(const std::vector<HalfFaceHandle> &constraint_hfs, const double radius_lower_bound, ACG::Vec3d &new_position);
+    bool find_chebyshev_center(const std::set<HalfFaceHandle> &constraint_hfs,
+                               const double radius_lower_bound,
+                               ACG::Vec3d &new_position,
+                               bool printDebug = false);
+    bool find_chebyshev_center(const TetrahedralMesh &_mesh,
+                               const std::set<HalfFaceHandle> &constraint_hfs,
+                               const double radius_lower_bound,
+                               ACG::Vec3d &new_position,
+                               bool printDebug);
 
     static void reset_queue(PriorityQueue& _queue);
     static void computeQuality(TetLoop::PriorityQueue &_queue, TetrahedralMesh &_mesh);
+    template<typename T>
+    static void printIterable(T _toPrint, bool _eol = false);
+    template<typename T>
+    static std::string iterableToString(T _toPrint);
+
+
+    static constexpr double CHEBY_THRESHOLD = 10e-2;
 private:
 
     bool topologial_pass(PriorityQueue* _A);
@@ -120,13 +142,24 @@ private:
 
     CellHandle findNextCell(Star& _startStar);
     void findCavityBoundary(std::set<HalfFaceHandle> &_cavityBoundary);
-    void findCavityBoundary(std::set<HalfFaceHandle> &_cavityBoundary, Star _constraint);
-    bool checkStarConditions(Star _star);
+    void findCavityBoundary(Star& _constraint);
+    bool checkStarConditions(Star& _star, CellHandle _lastAdded);
     bool checkCenter(Star _star);
     void createBoundaryMesh(std::set<HalfFaceHandle> &_cavityBoundary);
-    void triangle_normal_and_centroid(const HalfFaceHandle &hf, ACG::Vec3d &normal, ACG::Vec3d &centroid);
+    void cavityMesh3D(Star _star);
+    void triangle_normal_and_centroid(const HalfFaceHandle &hf,
+                                      ACG::Vec3d &normal,
+                                      ACG::Vec3d &centroid,
+                                      bool printDebug = false);
+    void triangle_normal_and_centroid(const TetrahedralMesh &_mesh,
+                                      const HalfFaceHandle &hf,
+                                      ACG::Vec3d &normal,
+                                      ACG::Vec3d &centroid,
+                                      bool printDebug);
+    void compareStarWithMesh(Star& _star, TetrahedralMesh& _mesh);
 
 private:
+//    VolumeMeshObject<TetrahedralMesh>& vmo_;
     TetrahedralMesh& mesh_;
     HalfFacePropertyT<bool> cavityEdge_;
     PriorityQueue quality_queue_;
@@ -146,7 +179,6 @@ private:
     const std::string LOGS_STEP = "../../../../Plugin-Master/logs/3D/quality_timesteps_";
     const std::string LOGS_MESH = "../../../../Plugin-Master/logs/meshes/";
 
-    static constexpr double CHEBY_THRESHOLD = 10e-2;
 };
 
 #endif // TETLOOP_HH

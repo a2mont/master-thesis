@@ -29,7 +29,10 @@ void MasterPlugin::pluginsInitialized(){
     // Arbitrary id for constraint vertex
     constraint_vhs_[0] = 0;
     slot_generate_base_mesh();
-    Tests::t_chebyshev_centroid();
+    for(int i = 0; i < 4; ++i){
+        std::string name = "mesh_dump" + std::to_string(i) + "_3D.ovm";
+        Tests::t_custom_chebyshev_centroid(name);
+    }
 //    worldMesh_ = gen_world_mesh();
 //    slot_show_quality();
 //    slot_show_constraint_vertex();

@@ -55,10 +55,13 @@ public:
             bounds_(_bounds),
             tets_(_tets){}
         Star(){}
-        void describe() const {std::cout << "Star with:\n\t-Center: "<<
-                                         center_ << "\n\t-Bounds: " <<
-                                         iterableToString<std::set<HalfFaceHandle>>(bounds_) << "\n\t-Tets: "<<
-                                         iterableToString<std::set<CellHandle>>(tets_)
+        void describe() const {    std::cout << "-Star\n\t-Center = " <<
+                                                center_ << "\n\t-Bounds = "<<
+                                                iterableToString<std::set<HalfFaceHandle>>(bounds_) <<
+                                                   " (total = "<< bounds_.size()<< ")"
+                                                << "\n\t-Tets = " <<
+                                                iterableToString<std::set<CellHandle>>(tets_)
+                                                << " (total= "<< tets_.size() << ")"
                                          << std::endl;
                                 }
     };
@@ -94,19 +97,19 @@ private:
 
 public:
     void loop(int _max_iter=1);
-    bool edgeRemoval(EdgeHandle _eh, std::vector<CellHandle>* const _cellsAdded, bool _verbose = true);
+    bool edgeRemoval(EdgeHandle _eh, std::vector<CellHandle>& _cellsAdded, bool _verbose = true);
     bool edgeRemoval(EdgeHandle _eh, bool _verbose = true);
     bool faceRemoval(FaceHandle _fh, bool _verbose = true);
     VertexHandle contractEdge(EdgeHandle _eh, std::vector<CellHandle>& _tetsAltered);
-    bool find_chebyshev_center(const std::set<HalfFaceHandle> &constraint_hfs,
-                               const double radius_lower_bound,
-                               ACG::Vec3d &new_position,
-                               bool printDebug = false);
+//    bool find_chebyshev_center(const std::set<HalfFaceHandle> &constraint_hfs,
+//                               const double radius_lower_bound,
+//                               ACG::Vec3d &new_position,
+//                               bool printDebug = false);
     bool find_chebyshev_center(const TetrahedralMesh &_mesh,
                                const std::set<HalfFaceHandle> &constraint_hfs,
                                const double radius_lower_bound,
                                ACG::Vec3d &new_position,
-                               bool printDebug);
+                               bool printDebug = false);
 
     static void reset_queue(PriorityQueue& _queue);
     static void computeQuality(TetLoop::PriorityQueue &_queue, TetrahedralMesh &_mesh);
@@ -119,26 +122,28 @@ public:
     static constexpr double CHEBY_THRESHOLD = 10e-2;
 private:
 
-    bool topologial_pass(PriorityQueue* _A);
-    void edge_contraction_pass(PriorityQueue* _A);
-    void insertion_pass(PriorityQueue* _A);
-    void smoothing_pass(PriorityQueue* _A, int _iterations);
+    bool topologial_pass(PriorityQueue& _A);
+    void edge_contraction_pass(PriorityQueue& _A);
+    void insertion_pass(PriorityQueue& _A);
+    void smoothing_pass(PriorityQueue& _A, int _iterations);
 
-    void improve_mesh(PriorityQueue _badTets);
+    void improve_mesh(PriorityQueue& _badTets);
     void improve_tet(Tet _t);
 
     void log( Logger* _logger, bool _endOfLine = false);
     void computeQuality();
-    void multiFace(FaceHandle _fh, std::vector<CellHandle>* const _cellsAdded);
+    void multiFace(FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
     TestNeighborResult testNeighbor(VertexHandle a,
                       VertexHandle b,
                       VertexHandle u,
                       VertexHandle w);
     double orient3D(VertexHandle _a, VertexHandle _b, VertexHandle _c, VertexHandle _d);
-    void flip32Recurse(TetLoop::FaceWithChildren _g, TetLoop::FaceWithChildren _parent, std::vector<CellHandle>* const _cellsAdded);
-    void flip32(EdgeHandle _eh, std::vector<CellHandle>* const _cellsAdded);
-    void flip23(FaceHandle _fh, std::vector<CellHandle>* const _cellsAdded);
-    void flip22(FaceHandle _fh, std::vector<CellHandle>* const _cellsAdded);
+    void flip32Recurse(TetLoop::FaceWithChildren _g,
+                       TetLoop::FaceWithChildren _parent,
+                       std::vector<CellHandle>& _cellsAdded);
+    void flip32(EdgeHandle _eh, std::vector<CellHandle>& _cellsAdded);
+    void flip23(FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
+    void flip22(FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
 
     CellHandle findNextCell(Star& _startStar);
     void findCavityBoundary(std::set<HalfFaceHandle> &_cavityBoundary);
@@ -146,7 +151,7 @@ private:
     bool checkStarConditions(Star& _star, CellHandle _lastAdded);
     bool checkCenter(Star _star);
     void createBoundaryMesh(std::set<HalfFaceHandle> &_cavityBoundary);
-    void cavityMesh3D(Star _star);
+    void cavityMesh3D(Star& _star);
     void triangle_normal_and_centroid(const HalfFaceHandle &hf,
                                       ACG::Vec3d &normal,
                                       ACG::Vec3d &centroid,
@@ -156,6 +161,7 @@ private:
                                       ACG::Vec3d &normal,
                                       ACG::Vec3d &centroid,
                                       bool printDebug);
+    void recoverBadStar(Star &_star, std::string _meshName);
     void compareStarWithMesh(Star& _star, TetrahedralMesh& _mesh);
 
 private:

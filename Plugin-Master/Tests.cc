@@ -239,7 +239,7 @@ bool Tests::t_chebyshev_centroid(){
     }
 
     ACG::Vec3d new_pos;
-    auto cheb_result = loop.find_chebyshev_center(hfs, TetLoop::CHEBY_THRESHOLD, new_pos, true);
+    auto cheb_result = loop.find_chebyshev_center(mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos, true);
 
     if(!cheb_result){
         std::cout<<" --> failed to find Chebyshev center"<<std::endl;
@@ -270,7 +270,7 @@ bool Tests::t_custom_chebyshev_centroid(std::string _filename){
     std::cout << "Bounds:\n" << TetLoop::iterableToString<std::set<HalfFaceHandle>>(hfs)<< std::endl;
 
     ACG::Vec3d new_pos;
-    auto cheb_result = loop.find_chebyshev_center(hfs, TetLoop::CHEBY_THRESHOLD, new_pos, true);
+    auto cheb_result = loop.find_chebyshev_center(mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos, true);
 
     if(!cheb_result){
         std::cout<<" --> failed to find Chebyshev center"<<std::endl;

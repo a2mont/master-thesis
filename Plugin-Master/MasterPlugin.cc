@@ -29,9 +29,14 @@ void MasterPlugin::pluginsInitialized(){
     // Arbitrary id for constraint vertex
     constraint_vhs_[0] = 0;
     slot_generate_base_mesh();
-    for(int i = 0; i < 4; ++i){
-        std::string name = "mesh_dump" + std::to_string(i) + "_3D.ovm";
-        Tests::t_custom_chebyshev_centroid(name);
+//    for(int i = 0; i < 2; ++i){
+//        std::string name = "mesh_dump" + std::to_string(i) + "_3D.ovm";
+//        Tests::t_custom_chebyshev_centroid(name);
+//    }
+//    Tests::t_chebyshev_centroid();
+    tool_->beginExpButton->click();
+    for(int i = 0; i < 15; ++i){
+        tool_->nextButton->click();
     }
 //    worldMesh_ = gen_world_mesh();
 //    slot_show_quality();
@@ -360,6 +365,7 @@ void MasterPlugin::slot_experiment_loop(){
         experiment3D_->generate_torsion_mesh(++t_ * 0.05 * nbLoops / timesteps_);
 
         *tetmesh = tetmesh_;
+        tetmesh->collect_garbage();
 
         emit updatedObject(tet_obj->id(), UPDATE_ALL);
 

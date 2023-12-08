@@ -22,7 +22,7 @@ void MasterPlugin::initializePlugin()
 
 
     // Add the Toolbox
-    emit addToolbox("Master", tool_);
+    emit addToolbox("Master", tool_, new QIcon());
 }
 
 void MasterPlugin::pluginsInitialized(){

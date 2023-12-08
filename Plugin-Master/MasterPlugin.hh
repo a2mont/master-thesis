@@ -47,26 +47,26 @@ signals:
 
 
     //LoggingInterface
-    void log(Logtype _type, QString _message);
-    void log(QString _message);
+    void log(Logtype _type, QString _message) override;
+    void log(QString _message) override;
 
     // LoadSaveInterface
-    void addEmptyObject(DataType _type, int& _id);
-    void updatedObject(int _identifier, const UpdateType& _type);
+    void addEmptyObject(DataType _type, int& _id) override;
+    void updatedObject(int _identifier, const UpdateType& _type) override;
 
     // ToolboxInterface
-    void addToolbox(QString _name, QWidget* _widget);
+    void addToolbox(QString _name, QWidget* _widget, QIcon* _icon) override;
     //PickingInterface
-    void addPickMode(const std::string& _mode);
-    void addHiddenPickMode(const std::string& _mode);
+    void addPickMode(const std::string& _mode) override;
+    void addHiddenPickMode(const std::string& _mode) override;
 
 
 private slots:
     // initialization functions
-    void initializePlugin();
-    void pluginsInitialized();
+    void initializePlugin() override;
+    void pluginsInitialized() override;
 
-    void slotMouseEvent(QMouseEvent* _event) ;
+    void slotMouseEvent(QMouseEvent* _event)  override;
     void slot_show_constraint_vertex();
     void slot_displace_constraint_vertex();
     void slot_generate_base_mesh();

@@ -37,12 +37,14 @@ void TetLoop::improve_mesh(PriorityQueue& _badTets){
     // B <- set of triangles in M with q < q_min
     // foreach t in B
     // if t still exists and q < q_min improve_tet(M,t,q_min)
+    int count(0);
     while (!_badTets.empty()) {
         auto t = _badTets.top();
         _badTets.pop();
         if(!mesh_.is_deleted(t.cell_handle_)){
             improve_tet(t);
         }
+        //if(++count >= 2) break;
     }
 }
 
@@ -721,6 +723,7 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
     //                createBoundaryMesh(star.bounds_);
                 cavityMesh3D(star);
             }
+//            star.center_ = {0,0,0};
 //            star.describe();
         }
         for(auto ch: star.tets_){
@@ -766,6 +769,21 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
     }
 
 
+    std::vector<VertexHandle> v_to_del;
+    for(auto vh: mesh_.vertices()){
+        int adjacentCells = 0;
+        for(auto f_ch:mesh_.vertex_cells(vh)){
+            ++adjacentCells;
+        }
+        if(adjacentCells == 0 && !mesh_.is_boundary(vh)){
+//            std::cout << "Low valence !!! Vertex: "<< vh << std::endl;
+            v_to_del.push_back(vh);
+        }
+    }
+    for(auto vh: v_to_del){
+        mesh_.delete_vertex(vh);
+    }
+
     // Remplir la galaxy
     // for each star
     // 1. compute center of cheby and add point
@@ -789,25 +807,12 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
 
     }
 
-    std::vector<VertexHandle> v_to_del;
-    for(auto vh: mesh_.vertices()){
-        int adjacentCells = 0;
-        for(auto f_ch:mesh_.vertex_cells(vh)){
-            ++adjacentCells;
-        }
-        if(adjacentCells == 0){
-//            std::cout << "Low valence !!! Vertex: "<< vh << std::endl;
-            v_to_del.push_back(vh);
-        }
-    }
-    for(auto vh: v_to_del){
-        mesh_.delete_vertex(vh);
-    }
+
 
     IO::FileManager fm;
     TetrahedralMesh copy = mesh_;
     copy.collect_garbage();
-    fm.writeFile("test.ovm", copy);
+    fm.writeFile(LOGS_MESH + "test.ovm", copy);
 
 }
 
@@ -843,20 +848,19 @@ void TetLoop::cavityMesh3D(Star& _star){
         auto verts = mesh_.get_cell_vertices(ch);
         for(auto vh: verts){
             if(vertices.find(vh) == vertices.end()){
-                copy.add_vertex(mesh_.vertex(vh));
+                table[vh] = copy.add_vertex(mesh_.vertex(vh));
                 vertices.insert(vh);
-                table[vh] = VertexHandle(vertexId++);
             }
         }
-
     }
     for(auto ch: toAdd){
         auto verts = mesh_.get_cell_vertices(ch);
-        copy.add_cell(
+        auto c = copy.add_cell(
                     table[verts[0]],
                     table[verts[1]],
                     table[verts[2]],
                     table[verts[3]]);
+        std::cout<<" added cell "<<c<<": "<<iterableToString<std::vector<VertexHandle>>(copy.get_cell_vertices(c))<<std::endl;
     }
     if(printDebug){
         std::cout << "Copy with:\n\t-"<<
@@ -867,6 +871,13 @@ void TetLoop::cavityMesh3D(Star& _star){
                   << std::endl;
     }
     copy.collect_garbage();
+
+    std::cout<<" copy #vertices: "<<copy.n_vertices()<<std::endl;
+    std::cout<<" copy cells: "<<std::endl;
+    for(auto c: copy.cells()){
+        std::cout<<" - "<<c<<": "<<iterableToString<std::vector<VertexHandle>>(copy.get_cell_vertices(c))<<std::endl;
+    }
+
     OpenVolumeMesh::IO::FileManager fm;
     std::string name = "mesh_dump" + std::to_string(fileId++) + "_3D.ovm";
     fm.writeFile(LOGS_MESH + name, copy);

@@ -33,9 +33,9 @@ void MasterPlugin::pluginsInitialized(){
 //        std::string name = "mesh_dump" + std::to_string(i) + "_3D.ovm";
 //        Tests::t_custom_chebyshev_centroid(name);
 //    }
-//    Tests::t_chebyshev_centroid();
+    Tests::t_EdgeRemoval();
     tool_->beginExpButton->click();
-    for(int i = 0; i < 15; ++i){
+    for(int i = 0; i < 25; ++i){
         tool_->nextButton->click();
     }
 //    worldMesh_ = gen_world_mesh();

@@ -2,7 +2,6 @@
 #define OPENFLIPPER_EXPERIMENTS_HH
 
 #include <ObjectTypes/TriangleMesh/TriangleMesh.hh>
-#include "TetLoop.hh"
 #include "TriangleLoop.hh"
 
 class Experiment
@@ -35,8 +34,6 @@ public:
     void bend2D(const int _timesteps, const int _currentT);
     void stretch2D(const int _timesteps, const int _currentT);
     void compress2D(const int _timesteps, const int _currentT);
-    //3D
-    void generate_torsion_mesh(double torsion_turns_count);
 
 };
 

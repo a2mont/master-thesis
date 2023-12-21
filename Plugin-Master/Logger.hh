@@ -24,6 +24,7 @@ public:
 
     void logQuality(double _quality);
     void nextLine();
+    void logAverage();
 private:
     std::fstream file_;
     std::string filename_;

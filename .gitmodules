@@ -1,0 +1,3 @@
+[submodule "Plugin-Master/or-tools"]
+	path = Plugin-Master/or-tools
+	url = https://github.com/google/or-tools.git

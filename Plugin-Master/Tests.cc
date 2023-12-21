@@ -9,6 +9,7 @@ bool Tests::t_EdgeRemoval()
     TetrahedralMesh mesh;
     TetLoop::PriorityQueue queue;
     EdgeHandle edgeToRemove;
+    std::vector<CellHandle> added;
     int cellNb = 0;
     double qualityBefore = 0;
     double qualityAfter = 0;
@@ -36,7 +37,7 @@ bool Tests::t_EdgeRemoval()
     TetLoop::reset_queue(queue);
 
     TetLoop loop(mesh, 0.4, cv);
-    loop.edgeRemoval(edgeToRemove);
+    loop.edgeRemoval(edgeToRemove, added);
 
     TetLoop::computeQuality(queue, mesh);
     qualityAfter = queue.top().quality_;
@@ -45,12 +46,19 @@ bool Tests::t_EdgeRemoval()
         cellNb++;
     }
 
+    std::cout << "Quality: "<< qualityBefore << " -> " << qualityAfter << std::endl;
     if(qualityAfter <= qualityBefore){
         std::cout << "\033[1;31m X Quality should improve after operation!\n\033[0m" << std::endl;
         return false;
     }
+    std::cout << "Cells #: "<< cellNb << std::endl;
     if(cellNb != 2){
         std::cout << "\033[1;31m X Only 2 cells should remain!\n\033[0m" << std::endl;
+        return false;
+    }
+    std::cout << "Modified tets: "<< added.size() << std::endl;
+    if(added.empty()){
+        std::cout << "\033[1;31m X The modified tets should be added!\n\033[0m" << std::endl;
         return false;
     }
 
@@ -197,11 +205,13 @@ bool Tests::t_EdgeContraction(){
     TetLoop::computeQuality(queue, mesh);
 
     TetLoop loop(mesh, 0.4, cv);
+    std::cout << "Tets before: " << mesh.n_logical_cells() << std::endl;
     loop.contractEdge(edgeToRemove, tetsAltered);
     std::cout << "Tets altered" << std::endl;
     for(auto t: tetsAltered){
         std::cout << t << ", ";
     }
+    std::cout << "Remaining tets: " << mesh.n_logical_cells() << std::endl;
 
     std::cout << "\033[1;32mPassed\033[0m\n"
                  "\033[1;35m------------------------------\n\033[0m" << std::endl;

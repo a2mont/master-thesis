@@ -17,6 +17,7 @@ public:
     static bool t_StressFaceRemoval();
     static bool t_chebyshev_centroid();
     static bool t_custom_chebyshev_centroid(std::string _filename="mesh_dump0_3D.ovm");
+    static bool t_flip22();
 private:
     Tests();
     inline static const std::string LOGS_MESH = "../../../../Plugin-Master/logs/meshes/";

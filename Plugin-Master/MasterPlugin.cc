@@ -33,7 +33,7 @@ void MasterPlugin::pluginsInitialized(){
 //        std::string name = "mesh_dump" + std::to_string(i) + "_3D.ovm";
 //        Tests::t_custom_chebyshev_centroid(name);
 //    }
-    Tests::t_EdgeRemoval();
+//    Tests::t_EdgeRemoval();
     tool_->beginExpButton->click();
     for(int i = 0; i < 25; ++i){
         tool_->nextButton->click();
@@ -378,6 +378,7 @@ void MasterPlugin::slot_experiment_loop(){
             tool_->timestepsSpinBox->setEnabled(true);
             tool_->experiment2D->setEnabled(true);
             tool_->experiment3D->setEnabled(true);
+            tool_->qualitySpinBox->setEnabled(true);
         }
     }
 }
@@ -482,32 +483,6 @@ void MasterPlugin::generate_tet_mesh(){
     auto mesh = mesh_obj->mesh();
 
     TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(dimension, dimension,dimension*2 , *mesh);
-//    std::map<int,int> cv = {{0,0}};
-//    int reverts = 0;
-//    int iters = 0;
-//    TetLoop::PriorityQueue queue;
-
-//    TetLoop loop(*mesh, 0.4, cv);
-//    int max = mesh->n_logical_faces();
-//    for(int i = 0; i < max; ++i){
-//        auto f = FaceHandle(i);
-//        if(!mesh->is_deleted(f)){
-//            auto result = loop.faceRemoval(f, false);
-//            reverts = result ? reverts : reverts + 1;
-//        }
-//        if(iters++ % 50 == 0){
-//            std::cout << "Iter " << iters << "/" << max << std::endl;
-//        }
-//    }
-
-//    TetLoop::computeQuality(queue, *mesh);
-//    if(queue.top().quality_ <= 10e-5){
-//        std::cout << "\033[1;31m X creates inverted tets!\033[0m" << std::endl;
-//    }
-//    std::cout << "# Reverts: " << reverts << "/" << iters << std::endl;
-//    std::cout << "\033[1;32mPassed\033[0m\n"
-//                 "\033[1;35m------------------------------\033[0m" << std::endl;
-
 
     mesh_obj->meshNode()->drawMode(
                 DrawModes::Cells_flat() |

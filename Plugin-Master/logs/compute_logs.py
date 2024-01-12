@@ -100,13 +100,13 @@ def data_from_files(filenames, dimension='3D'):
 
 def main():
     # Constant logs
-    regex = re.compile('(.*logs.*\.csv$)')
+    regex = re.compile('(.*detailed.*\.csv$)')
     filenames = find_files(regex)
     datas_logs = data_from_files(filenames)
     plot_logs(datas_logs)
 
     # Timestep logs
-    regex = re.compile('(.*timesteps.*\.csv$)')
+    regex = re.compile('(.*global.*\.csv$)')
     filenames = find_files(regex)
     datas_ts = data_from_files(filenames)
     plot_timesteps(datas_ts)

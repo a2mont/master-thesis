@@ -22,4 +22,4 @@ public:
 
 };
 
-#endif // EXPERIMENTS_HH
+#endif // OPENFLIPPER_EXPERIMENTS3D_HH

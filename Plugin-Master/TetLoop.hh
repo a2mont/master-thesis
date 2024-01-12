@@ -2,9 +2,6 @@
 #define TETLOOP_HH
 
 #include <ObjectTypes/TetrahedralMesh/TetrahedralMesh.hh>
-//#include <CGAL/QP_models.h>
-//#include <CGAL/QP_functions.h>
-
 #include "TopologicalLink.hh"
 #include "VertexDisplacement.hh"
 #include "QualityEvaluation.hh"
@@ -13,6 +10,7 @@
 #include "eigen3/Eigen/Dense"
 #include "OpenVolumeMesh/FileManager/FileManager.hh"
 #include "ortools/linear_solver/linear_solver.h"
+#include <chrono>
 
 using namespace OpenVolumeMesh;
 
@@ -21,16 +19,16 @@ class TetLoop
 public:
     TetLoop(TetrahedralMesh& _mesh, double _q_min, std::map<int,int>& _constraint_vhs, const bool _logs = false) :
         mesh_(_mesh),
+        world_mesh_(_mesh),
         cavityEdge_(mesh_.request_halfface_property<bool>("Cavity Edge")),
+        cavityEdge_wm_(world_mesh_.request_halfface_property<bool>("Cavity Edge")),
         constraint_vhs_(_constraint_vhs),
         includeLogs_(_logs),
         q_min_(_q_min)
     {
         if(_logs){
             logsAddress_ = LOGS_BASE + std::to_string(q_min_).substr(0,4) + LOGS_EXTENSION;
-            std::string logsTimesteps = LOGS_STEP + std::to_string(q_min_).substr(0,4) + LOGS_EXTENSION;
             logger_= new Logger(logsAddress_, q_min_);
-            timeStepLogger_ = new Logger(logsTimesteps, q_min_);
         }
 
     }
@@ -47,6 +45,7 @@ public:
         std::set<HalfFaceHandle> bounds_;
         std::set<CellHandle> tets_;
         std::map<HalfFaceHandle, std::vector<VertexHandle>> surfaceDict_;
+        std::vector<std::vector<VertexHandle>> reconstructionVectors_;
         Star(std::set<CellHandle> _tets) :
             tets_(_tets){}
         Star(std::set<CellHandle> _tets, std::set<HalfFaceHandle> _bounds) :
@@ -82,6 +81,24 @@ public:
         }
     };
 
+    struct Stats{
+        enum StatType {TIMESTEP, TOPOLOGY, CONTRACTION, INSERTION, SMOOTHING};
+        std::vector<double> timestep_quality_;
+        std::vector<double> topo_quality_delta_;
+        std::vector<double> contra_quality_delta_;
+        std::vector<double> insert_quality_delta_;
+        std::vector<double> smooth_quality_delta_;
+
+        void flush(){
+            timestep_quality_.clear();
+            topo_quality_delta_.clear();
+            contra_quality_delta_.clear();
+            insert_quality_delta_.clear();
+            smooth_quality_delta_.clear();
+        }
+
+    };
+
     using PriorityQueue = std::priority_queue<Tet, std::vector<Tet>, CompareQuality>;
     using Point = ACG::Vec3d;
 
@@ -109,6 +126,7 @@ public:
     void loop(int _max_iter=1);
     bool edgeRemoval(EdgeHandle _eh, std::vector<CellHandle>& _cellsAdded, bool _verbose = true);
     bool edgeRemoval(EdgeHandle _eh, bool _verbose = true);
+    bool faceRemoval(FaceHandle _fh, std::vector<CellHandle>& _cellsAdded, std::vector<int>& _counter, bool _verbose = true);
     bool faceRemoval(FaceHandle _fh, bool _verbose = true);
     VertexHandle contractEdge(EdgeHandle _eh, std::vector<CellHandle>& _tetsAltered);
     bool find_chebyshev_center(const TetrahedralMesh &_mesh,
@@ -127,16 +145,20 @@ public:
     static std::string vectorToString(std::vector<T> _toPrint);
     template<typename T>
     static std::string setToString(std::set<T> _toPrint);
+    template<typename T>
+    static void clearDuplicates(std::vector<T> &_vector);
 
     static constexpr double CHEBY_THRESHOLD = 0.1;
-    static void cleanMesh(TetrahedralMesh _mesh);
-    
+    static void cleanMesh(TetrahedralMesh& _mesh, bool _keepBoundary = false);
+    static void cleanQualityQueue(PriorityQueue& _queue, TetrahedralMesh& _mesh);
+    static void displayIterationTime(std::chrono::system_clock::time_point& _begin, std::string _name);
+    static void logStats(Stats _stats, Logger& _logger);
 private:
 
     bool topologial_pass(PriorityQueue& _A);
     void edge_contraction_pass(PriorityQueue& _A);
     void insertion_pass(PriorityQueue& _A);
-    void smoothing_pass(PriorityQueue& _A, int _iterations);
+    void smoothing_pass(PriorityQueue& _A, int _iterations = 1);
 
     void improve_mesh(PriorityQueue& _badTets);
     void improve_tet(Tet _t);
@@ -162,9 +184,9 @@ private:
     void flip23(TetrahedralMesh& _mesh, FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
     void flip22(TetrahedralMesh& _mesh, FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
 
-    CellHandle findNextCell(Star& _startStar);
+    CellHandle findNextCell(Star& _startStar, std::vector<Star>& _galaxy);
     void findCavityBoundary(std::set<HalfFaceHandle> &_cavityBoundary);
-    void findCavityBoundary(Star& _constraint);
+    void findCavityBoundary(Star& _constraint, bool _isWorldMesh = false);
     bool checkStarConditions(Star& _star, CellHandle _lastAdded);
     bool checkCenter(Star _star);
     void createBoundaryMesh(std::set<HalfFaceHandle> &_cavityBoundary);
@@ -180,26 +202,31 @@ private:
                                       bool printDebug = false);
     void recoverBadStar(Star &_star, std::string _meshName);
     void compareStarWithMesh(Star& _star, TetrahedralMesh& _mesh);
+    bool validateWorldMesh(TetrahedralMesh &_mesh);
+    double computeQualityDelta(double _before);
+    void addToStats(Stats::StatType _statName, double _quality);
 
 private:
-//    VolumeMeshObject<TetrahedralMesh>& vmo_;
     TetrahedralMesh& mesh_;
+    TetrahedralMesh world_mesh_;
     HalfFacePropertyT<bool> cavityEdge_;
+    HalfFacePropertyT<bool> cavityEdge_wm_;
     PriorityQueue quality_queue_;
 
     Logger *logger_;
-    Logger *timeStepLogger_;
+    Stats stats_;
+
 
     std::map<int,int>& constraint_vhs_;
 
     std::string logsAddress_;
     const bool includeLogs_;
     const double q_min_;
+    const bool useWorldSpace_ = false;
 
 
-    const std::string LOGS_BASE = "../../../../Plugin-Master/logs/3D/detailed_quality_";
+    const std::string LOGS_BASE = "../../../../Plugin-Master/logs/3D/logs_";
     const std::string LOGS_EXTENSION = ".csv";
-    const std::string LOGS_STEP = "../../../../Plugin-Master/logs/3D/global_quality_";
     const std::string LOGS_MESH = "../../../../Plugin-Master/logs/meshes/";
 
 };

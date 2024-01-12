@@ -113,7 +113,7 @@ double QualityEvaluation::calculate_edge_length(TetrahedralMesh& _mesh,
 double QualityEvaluation::calculate_volume(TetrahedralMesh& _mesh, OpenVolumeMesh::CellHandle _cellHandle){
     double volume = 0;
     std::vector<OpenVolumeMesh::VertexHandle> vertices;
-    for(auto vh : _mesh.get_cell_vertices(_cellHandle)){
+    for(auto vh : _mesh.tet_vertices(_cellHandle)){
         vertices.push_back(vh);
     }
     volume = calculate_volume(_mesh, vertices[0], vertices[1], vertices[2], vertices[3]);

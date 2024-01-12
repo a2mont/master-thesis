@@ -180,6 +180,31 @@ bool Tests::t_StressFaceRemoval(){
     return true;
 }
 
+bool Tests::t_flip22(){
+    bool passed(false);
+    std::cout << "\033[1;35m------------------------------"
+                 "\n 2-2 split test\n\033[0m" << std::endl;
+    TetrahedralMesh mesh;
+    TetLoop::PriorityQueue queue;
+    EdgeHandle edgeToRemove;
+    std::vector<CellHandle> added;
+    int cellNb = 0;
+    double qualityBefore = 0;
+    double qualityAfter = 0;
+    std::map<int,int> cv = {{0,0}};
+
+    auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  0,  0));
+    auto v1 = mesh.add_vertex(ACG::Vec3d(-1,  5,  1));
+    auto v2 = mesh.add_vertex(ACG::Vec3d( 0,  5, -1));
+    auto v3 = mesh.add_vertex(ACG::Vec3d( 1,  5,  1));
+    auto v4 = mesh.add_vertex(ACG::Vec3d( 0, 10,  0));
+
+    mesh.add_cell(v0,v1,v3,v4, true);
+    mesh.add_cell(v0,v2,v1,v4, true);
+    mesh.add_cell(v4,v2,v3,v0, true);
+    return passed;
+}
+
 bool Tests::t_EdgeContraction(){
     std::cout << "\033[1;35m------------------------------"
                  "\nEdge contraction test\n\033[0m"<< std::endl;

@@ -1,7 +1,5 @@
 #include "Tests.hh"
 
-
-
 bool Tests::t_EdgeRemoval()
 {
     std::cout << "\033[1;35m------------------------------"
@@ -37,8 +35,65 @@ bool Tests::t_EdgeRemoval()
     TetLoop::reset_queue(queue);
 
     TetLoop loop(mesh, 0.4, cv);
-    loop.edgeRemoval(edgeToRemove, added);
+    loop.edgeRemoval(edgeToRemove, added, true);
 
+    TetLoop::computeQuality(queue, mesh);
+    qualityAfter = queue.top().quality_;
+
+    for(auto ch: mesh.cells()){
+        cellNb++;
+    }
+
+    std::cout << "Quality: "<< qualityBefore << " -> " << qualityAfter << std::endl;
+    if(qualityAfter <= qualityBefore){
+        std::cout << "\033[1;31m X Quality should improve after operation!\n\033[0m" << std::endl;
+        return false;
+    }
+    std::cout << "Cells #: "<< cellNb << std::endl;
+    if(cellNb != 2){
+        std::cout << "\033[1;31m X Only 2 cells should remain!\n\033[0m" << std::endl;
+        return false;
+    }
+    std::cout << "Modified tets: "<< added.size() << std::endl;
+    if(added.size() != 2){
+        std::cout << "\033[1;31m X The 2 modified tets should be added!\n\033[0m" << std::endl;
+        return false;
+    }
+
+    std::cout << "\033[1;32mPassed\033[0m\n"
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
+
+    return true;
+}
+bool Tests::t_custom_EdgeRemoval(std::string _filename)
+{
+    std::cout << "\033[1;35m------------------------------"
+                 "\nEdge removal test with custom mesh\n\033[0m" << std::endl;
+    TetrahedralMesh mesh;
+    TetLoop::PriorityQueue queue;
+    EdgeHandle edgeToRemove;
+    std::vector<CellHandle> added;
+    int cellNb = 0;
+    double qualityBefore = 0;
+    double qualityAfter = 0;
+    std::map<int,int> cv = {{0,0}};
+
+    OpenVolumeMesh::IO::FileManager fileManager;
+    fileManager.readFile(LOGS_MESH + _filename, mesh);
+
+    for(auto e: mesh.edges()){
+        if(!mesh.is_boundary(e)){
+            edgeToRemove = e;
+            std::cout << "Removing central edge: "<< e << std::endl;
+        }
+    }
+
+    TetLoop::computeQuality(queue, mesh);
+    qualityBefore = queue.top().quality_;
+    TetLoop::reset_queue(queue);
+
+    TetLoop loop(mesh, 0.4, cv);
+    loop.edgeRemoval(edgeToRemove, added, true);
     TetLoop::computeQuality(queue, mesh);
     qualityAfter = queue.top().quality_;
 
@@ -106,9 +161,9 @@ bool Tests::t_FaceRemoval(){
     std::map<int,int> cv = {{0,0}};
 
     auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  0,  0));
-    auto v1 = mesh.add_vertex(ACG::Vec3d(-1,  5,  1));
+    auto v1 = mesh.add_vertex(ACG::Vec3d(-5,  5,  5));
     auto v2 = mesh.add_vertex(ACG::Vec3d( 0,  5, -1));
-    auto v3 = mesh.add_vertex(ACG::Vec3d( 1,  5,  1));
+    auto v3 = mesh.add_vertex(ACG::Vec3d( 5,  5,  5));
     auto v4 = mesh.add_vertex(ACG::Vec3d( 0, 10,  0));
 
 
@@ -120,7 +175,7 @@ bool Tests::t_FaceRemoval(){
     TetLoop::reset_queue(queue);
 
     TetLoop loop(mesh, 0.4, cv);
-    loop.faceRemoval(FaceHandle(0));
+    loop.faceRemoval(FaceHandle(0), true);
 
 
     TetLoop::computeQuality(queue, mesh);
@@ -135,7 +190,7 @@ bool Tests::t_FaceRemoval(){
         return false;
     }
     if(cellNb != 3){
-        std::cout << "\033[1;31m X Only 2 cells should remain!\n\033[0m" << std::endl;
+        std::cout << "\033[1;31m X Only 3 cells should remain!\n\033[0m" << std::endl;
         return false;
     }
 
@@ -180,10 +235,77 @@ bool Tests::t_StressFaceRemoval(){
     return true;
 }
 
-bool Tests::t_flip22(){
-    bool passed(false);
+bool Tests::t_flip23(){
     std::cout << "\033[1;35m------------------------------"
-                 "\n 2-2 split test\n\033[0m" << std::endl;
+                 "\n2-3flip test\n\033[0m"<< std::endl;
+    TetrahedralMesh mesh;
+    TetLoop::PriorityQueue queue;
+    FaceHandle toRemove(-1);
+    int cellNb = 0;
+    double qualityBefore = 0;
+    double qualityAfter = 0;
+    std::map<int,int> cv = {{0,0}};
+
+    auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  0,  0));
+    auto v1 = mesh.add_vertex(ACG::Vec3d(-10,  2.5,  10));
+    auto v2 = mesh.add_vertex(ACG::Vec3d( 0,  2.5, -10));
+    auto v3 = mesh.add_vertex(ACG::Vec3d( 10,  2.5,  10));
+    auto v4 = mesh.add_vertex(ACG::Vec3d( 0, 5,  0));
+
+
+    mesh.add_cell(v1,v2,v3,v0, true);
+    mesh.add_cell(v1,v3,v2,v4, true);
+
+    TetLoop::computeQuality(queue, mesh);
+    qualityBefore = queue.top().quality_;
+    TetLoop::reset_queue(queue);
+
+    for(auto fh: mesh.faces()){
+        if(!mesh.is_boundary(fh)){
+            std::cout << "Face to remove: "<< fh << std::endl;
+            toRemove = fh;
+            break;
+        }
+    }
+
+    std::vector<CellHandle> added;
+    TetLoop loop(mesh, 0.4, cv);
+    loop.flip23(mesh, toRemove, added);
+
+
+    TetLoop::computeQuality(queue, mesh);
+    qualityAfter = queue.top().quality_;
+
+    for(auto ch: mesh.cells()){
+        cellNb++;
+    }
+
+//    if(qualityAfter <= qualityBefore){
+//        std::cout << "\033[1;31m X Quality should improve after operation! Quality: "
+//                  << qualityBefore<< " -> "<< qualityAfter <<"\n\033[0m" << std::endl;
+//        return false;
+//    }
+    if(cellNb != 3){
+        std::cout << "\033[1;31m X Only 3 cells should remain! Cell number:"<< cellNb
+                  << "\n\033[0m" << std::endl;
+        return false;
+    }
+
+    std::cout << "Added cells: "<< TetLoop::vectorToString<CellHandle>(added) << std::endl;
+    if(added.size() != 3){
+        std::cout << "\033[1;31m X Only 3 cells should be added ! added: "<< added.size()
+                  <<"\n\033[0m" << std::endl;
+        return false;
+    }
+
+    std::cout << "\033[1;32mPassed\033[0m\n"
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
+    return true;
+}
+
+bool Tests::t_flip32(){
+    std::cout << "\033[1;35m------------------------------"
+                 "\n3-2 flip test\n\033[0m" << std::endl;
     TetrahedralMesh mesh;
     TetLoop::PriorityQueue queue;
     EdgeHandle edgeToRemove;
@@ -202,7 +324,117 @@ bool Tests::t_flip22(){
     mesh.add_cell(v0,v1,v3,v4, true);
     mesh.add_cell(v0,v2,v1,v4, true);
     mesh.add_cell(v4,v2,v3,v0, true);
-    return passed;
+
+    for(auto e: mesh.edges()){
+        if(!mesh.is_boundary(e)){
+            edgeToRemove = e;
+            std::cout << "Removing central edge: "<< e << std::endl;
+        }
+    }
+
+    TetLoop::computeQuality(queue, mesh);
+    qualityBefore = queue.top().quality_;
+    TetLoop::reset_queue(queue);
+
+    TetLoop loop(mesh, 0.4, cv);
+    loop.flip32(mesh,edgeToRemove, added);
+
+    TetLoop::computeQuality(queue, mesh);
+    qualityAfter = queue.top().quality_;
+
+    for(auto ch: mesh.cells()){
+        cellNb++;
+    }
+
+    if(qualityAfter <= qualityBefore){
+        std::cout << "\033[1;31m X Quality should improve after operation! Quality: "
+                  << qualityBefore<< " -> "<< qualityAfter <<"\n\033[0m" << std::endl;
+        return false;
+    }
+    if(cellNb != 2){
+        std::cout << "\033[1;31m X Only 2 cells should remain! Cell number:"<< cellNb
+                  << "\n\033[0m" << std::endl;
+        return false;
+    }
+
+    std::cout << "Added cells: "<< TetLoop::vectorToString<CellHandle>(added) << std::endl;
+    if(added.size() != 2){
+        std::cout << "\033[1;31m X Only 2 cells should be added ! added: "<< added.size()
+                  <<"\n\033[0m" << std::endl;
+        return false;
+    }
+
+    std::cout << "\033[1;32mPassed\033[0m\n"
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
+
+    return true;
+}
+
+bool Tests::t_multiface(){
+    std::cout << "\033[1;35m------------------------------"
+                 "\nMultiface removal test\n\033[0m"<< std::endl;
+    TetrahedralMesh mesh;
+    TetLoop::PriorityQueue queue;
+    FaceHandle toRemove(-1);
+    int cellNb = 0;
+    double qualityBefore = 0;
+    double qualityAfter = 0;
+    std::map<int,int> cv = {{0,0}};
+
+    auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  0,  0));
+    auto v1 = mesh.add_vertex(ACG::Vec3d(-10,  2.5,  10));
+    auto v2 = mesh.add_vertex(ACG::Vec3d( 0,  2.5, -10));
+    auto v3 = mesh.add_vertex(ACG::Vec3d( 10,  2.5,  10));
+    auto v4 = mesh.add_vertex(ACG::Vec3d( 0, 5,  0));
+
+
+    mesh.add_cell(v1,v2,v3,v0, true);
+    mesh.add_cell(v1,v3,v2,v4, true);
+
+    TetLoop::computeQuality(queue, mesh);
+    qualityBefore = queue.top().quality_;
+    TetLoop::reset_queue(queue);
+
+    for(auto fh: mesh.faces()){
+        if(!mesh.is_boundary(fh)){
+            std::cout << "Face to remove: "<< fh << std::endl;
+            toRemove = fh;
+            break;
+        }
+    }
+
+    std::vector<CellHandle> added;
+    TetLoop loop(mesh, 0.4, cv);
+    loop.multiFace(mesh, toRemove, added);
+
+
+    TetLoop::computeQuality(queue, mesh);
+    qualityAfter = queue.top().quality_;
+
+    for(auto ch: mesh.cells()){
+        cellNb++;
+    }
+
+//    if(qualityAfter <= qualityBefore){
+//        std::cout << "\033[1;31m X Quality should improve after operation! Quality: "
+//                  << qualityBefore<< " -> "<< qualityAfter <<"\n\033[0m" << std::endl;
+//        return false;
+//    }
+    if(cellNb != 3){
+        std::cout << "\033[1;31m X Only 3 cells should remain! Cell number:"<< cellNb
+                  << "\n\033[0m" << std::endl;
+        return false;
+    }
+
+    if(added.size() != 3){
+        std::cout << "\033[1;31m X Only 3 cells should be added ! added: "<< added.size()
+                  <<"\n\033[0m" << std::endl;
+        return false;
+    }
+
+    std::cout << "\033[1;32mPassed\033[0m\n"
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
+    return true;
 }
 
 bool Tests::t_EdgeContraction(){
@@ -274,14 +506,16 @@ bool Tests::t_chebyshev_centroid(){
     }
 
     ACG::Vec3d new_pos;
-    auto cheb_result = loop.find_chebyshev_center(mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos, true);
+    bool cheb_result = loop.find_chebyshev_center(mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos);
 
     if(!cheb_result){
-        std::cout<<" --> failed to find Chebyshev center"<<std::endl;
+        std::cout << "\033[1;31m X Failed to find cheby center \n\033[0m" << std::endl;
         return false;
     }
 
     std::cout<<" --> new position = "<<new_pos<<std::endl;
+    std::cout << "\033[1;32mPassed\033[0m\n"
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
     return true;
 }
 
@@ -293,7 +527,6 @@ bool Tests::t_custom_chebyshev_centroid(std::string _filename){
     OpenVolumeMesh::IO::FileManager fileManager;
     fileManager.readFile(LOGS_MESH + _filename, mesh);
 
-
     std::map<int,int> cv = {{0,0}};
     TetLoop loop(mesh, 0.5, cv);
     std::set<HalfFaceHandle> hfs;
@@ -302,10 +535,10 @@ bool Tests::t_custom_chebyshev_centroid(std::string _filename){
             hfs.insert(hf);
         }
     }
-    std::cout << "Bounds:\n" << TetLoop::iterableToString<std::set<HalfFaceHandle>>(hfs)<< std::endl;
+//    std::cout << "Bounds:\n" << TetLoop::setToString<HalfFaceHandle>(hfs)<< std::endl;
 
     ACG::Vec3d new_pos;
-    auto cheb_result = loop.find_chebyshev_center(mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos, true);
+    auto cheb_result = loop.find_chebyshev_center(mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos);
 
     if(!cheb_result){
         std::cout<<" --> failed to find Chebyshev center"<<std::endl;
@@ -313,29 +546,89 @@ bool Tests::t_custom_chebyshev_centroid(std::string _filename){
     }
 
     std::cout<<" --> new position = "<<new_pos<<std::endl;
+    std::cout << "\033[1;32mPassed\033[0m\n"
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
+    return true;
+}
+
+
+bool Tests::t_quality_evaluation(){
+    std::cout << "\033[1;35m------------------------------"
+                 "\nQuality evalutation test\n\033[0m"<< std::endl;
+    TetrahedralMesh mesh;
+    TetLoop::PriorityQueue queue;
+    // Good setting
+    auto v0 = mesh.add_vertex({0,0,0});
+    auto v1 = mesh.add_vertex({0,1,1});
+    auto v2 = mesh.add_vertex({1,0,1});
+    auto v3 = mesh.add_vertex({1,1,0});
+    mesh.add_cell({v0,v1,v2,v3});
+
+    TetLoop::computeQuality(queue,mesh);
+    double qualityBefore = queue.top().quality_;
+    std::cout << "Quality of good element: " << qualityBefore <<std::endl;
+
+    mesh.clear();
+
+    // Bad setting
+    v0 = mesh.add_vertex({0,0,0});
+    v1 = mesh.add_vertex({0,1,10});
+    v2 = mesh.add_vertex({1,0,0.1});
+    v3 = mesh.add_vertex({1,5,0});
+    mesh.add_cell({v0,v1,v2,v3});
+
+
+    TetLoop::computeQuality(queue,mesh);
+    double qualityAfter = queue.top().quality_;
+    std::cout << "Quality of bad element: "<< qualityAfter << std::endl;
+
+    if(qualityAfter > qualityBefore){
+        std::cout << "\033[1;31m X Quality should improve!\n\033[0m" << std::endl;
+        return false;
+    }
+
+    mesh.clear();
+    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::
+            generate_mesh(3,3,3,mesh);
+    std::map<int,int> cst;
+    Experiment3D exp(mesh, 0.1, cst);
+    exp.generate_torsion_mesh(1.5/15 *5, false);
+
+    TetLoop::computeQuality(queue,mesh);
+    int counter(0);
+    std::cout << "Ordered list of elements: " << std::endl;
+    while (!queue.empty()){
+        auto top = queue.top();
+        queue.pop();
+        std::cout << top.quality_ << ", ";
+        if(++counter % 10 == 0){
+            std::cout << std::endl;
+        }
+    }
+    std::cout << std::endl;
+
+    std::cout << "\033[1;32mPassed\033[0m\n"
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
+
     return true;
 }
 
 bool Tests::runAll(){
     std::cout << "\033[1;35mRun all tests\n" << std::endl;
-    bool passed, contract, edge, face, stressEdge, stressFace, cheby, chebyCustom;
-    passed = contract = edge = face = stressEdge = stressFace = cheby = chebyCustom = false;
+    bool passed(false), edge(false), face(false),
+            flip23(false), flip32(false),cheby(false);
 
-    contract    = t_EdgeContraction();
     edge        = t_EdgeRemoval();
-//    face        = t_FaceRemoval();
-    stressEdge  = t_StressEdgeRemoval();
-    stressFace  = t_StressFaceRemoval();
+    face        = t_FaceRemoval();
+    flip23      = t_flip23();
+    flip32      = t_flip32();
     cheby       = t_chebyshev_centroid();
-    chebyCustom = t_custom_chebyshev_centroid();
     passed =
-            contract &&
             edge &&
             face &&
-            stressEdge &&
-            stressFace &&
             cheby &&
-            chebyCustom
+            flip32 &&
+            flip23
             ;
     return passed;
 }

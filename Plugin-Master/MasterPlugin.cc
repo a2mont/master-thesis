@@ -33,11 +33,11 @@ void MasterPlugin::pluginsInitialized(){
 //        std::string name = "mesh_dump" + std::to_string(i) + "_3D.ovm";
 //        Tests::t_custom_chebyshev_centroid(name);
 //    }
-//    Tests::t_EdgeRemoval();
-    tool_->beginExpButton->click();
-    for(int i = 0; i < 25; ++i){
-        tool_->nextButton->click();
-    }
+//    Tests::runAll();
+//    tool_->beginExpButton->click();
+//    for(int i = 0; i < 5; ++i){
+//        tool_->nextButton->click();
+//    }
 //    worldMesh_ = gen_world_mesh();
 //    slot_show_quality();
 //    slot_show_constraint_vertex();
@@ -257,7 +257,7 @@ void MasterPlugin::slot_displace_constraint_vertex(){
         std::cout << "Loop ended" << std::endl;
 
         *tetmesh = tetmesh_;
-//        tetmesh->collect_garbage();
+        tetmesh->collect_garbage();
 
         emit updatedObject(tet_obj->id(), UPDATE_ALL);
     }
@@ -304,7 +304,7 @@ void MasterPlugin::slot_start_experiment(){
 
         tet_obj->materialNode()->set_point_size(3.0);
 
-        experiment3D_ = new Experiment3D(tetmesh_, q_min_, constraint_vhs_);
+        experiment3D_ = new Experiment3D(tetmesh_, -q_min_, constraint_vhs_);
         std::cout << "Selected experiment: " << tool_->experiment3D->currentText().toStdString() << std::endl;
 
         slot_experiment_loop();
@@ -361,8 +361,9 @@ void MasterPlugin::slot_experiment_loop(){
          o_it != PluginFunctions::objectsEnd(); ++o_it) {
         auto *tet_obj = PluginFunctions::tetrahedralMeshObject(*o_it);
         auto *tetmesh = tet_obj->mesh();
-        int nbLoops = 1;
-        experiment3D_->generate_torsion_mesh(++t_ * 0.05 * nbLoops / timesteps_);
+        double nbLoops = 1.25;
+        experiment3D_->generate_torsion_mesh(nbLoops/timesteps_);
+        ++t_;
 
         *tetmesh = tetmesh_;
         tetmesh->collect_garbage();
@@ -482,7 +483,56 @@ void MasterPlugin::generate_tet_mesh(){
     // Create a mesh object
     auto mesh = mesh_obj->mesh();
 
-    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(dimension, dimension,dimension*2 , *mesh);
+    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::
+            generate_mesh(dimension, dimension,dimension*2 , *mesh);
+//    TetLoop::PriorityQueue queue;
+//    EdgeHandle edgeToRemove;
+//    std::vector<CellHandle> added;
+//    int cellNb = 0;
+//    double qualityBefore = 0;
+//    double qualityAfter = 0;
+//    std::map<int,int> cv = {{0,0}};
+
+//    OpenVolumeMesh::IO::FileManager fileManager;
+//    fileManager.readFile("../../../../Plugin-Master/logs/meshes/mesh_dump0_3D.ovm", *mesh);
+
+//    for(auto e: mesh->edges()){
+//        if(!mesh->is_boundary(e)){
+//            edgeToRemove = e;
+//            std::cout << "Removing central edge: "<< e << std::endl;
+//        }
+//    }
+//    TetLoop::PriorityQueue queue;
+//    FaceHandle toRemove(-1);
+//    int cellNb = 0;
+//    double qualityBefore = 0;
+//    double qualityAfter = 0;
+//    std::map<int,int> cv = {{0,0}};
+
+//    auto v0 = mesh->add_vertex(ACG::Vec3d( 0,  0,  0));
+//    auto v1 = mesh->add_vertex(ACG::Vec3d(-10,  2.5,  10));
+//    auto v2 = mesh->add_vertex(ACG::Vec3d( 0,  2.5, -10));
+//    auto v3 = mesh->add_vertex(ACG::Vec3d( 10,  2.5,  10));
+//    auto v4 = mesh->add_vertex(ACG::Vec3d( 0, 5,  0));
+
+
+//    mesh->add_cell(v1,v2,v3,v0, true);
+//    mesh->add_cell(v1,v3,v2,v4, true);
+
+
+//    for(auto fh: mesh->faces()){
+//        if(!mesh->is_boundary(fh)){
+//            std::cout << "Face to remove: "<< fh << std::endl;
+//            toRemove = fh;
+//            break;
+//        }
+//    }
+
+//    std::vector<CellHandle> added;
+//    TetLoop loop(*mesh, 0.4, cv);
+//    loop.multiFace(*mesh, toRemove, added);
+
+//    mesh->collect_garbage();
 
     mesh_obj->meshNode()->drawMode(
                 DrawModes::Cells_flat() |

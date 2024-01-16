@@ -29,6 +29,7 @@ public:
 
 private:
     // 3D
+    static double symmetric_dirichlet_energy(const TetrahedralMesh &mesh, const std::vector<OpenVolumeMesh::VertexHandle> &_c_verts);
     static double calculate_volume(TetrahedralMesh& _mesh, OpenVolumeMesh::CellHandle _cellHandle);
     static double calculate_volume(TetrahedralMesh& _mesh,
                                    OpenVolumeMesh::VertexHandle _v0,

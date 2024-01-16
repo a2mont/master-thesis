@@ -18,7 +18,7 @@ private:
 
 public:
     //3D
-    void generate_torsion_mesh(double torsion_turns_count);
+    void generate_torsion_mesh(double torsion_turns_count, bool _withRemesh = true);
 
 };
 

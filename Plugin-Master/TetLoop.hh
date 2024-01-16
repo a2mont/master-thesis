@@ -135,8 +135,17 @@ public:
                                ACG::Vec3d &new_position,
                                bool printDebug = false);
 
+    void flip32(TetrahedralMesh& _mesh, EdgeHandle _eh, std::vector<CellHandle>& _cellsAdded);
+    void flip23(TetrahedralMesh& _mesh, FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
+    void flip22(TetrahedralMesh& _mesh, FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
+    void multiFace(TetrahedralMesh& _mesh, FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
+
     static void reset_queue(PriorityQueue& _queue);
     static void computeQuality(TetLoop::PriorityQueue &_queue, TetrahedralMesh &_mesh);
+    template<typename T>
+    static void computeQuality(TetLoop::PriorityQueue &_queue,
+                        TetrahedralMesh &_mesh,
+                        const T &_iterableToEvaluate);
     template<typename T>
     static void printIterable(T _toPrint, bool _eol = false);
     template<typename T>
@@ -148,7 +157,7 @@ public:
     template<typename T>
     static void clearDuplicates(std::vector<T> &_vector);
 
-    static constexpr double CHEBY_THRESHOLD = 0.1;
+    static constexpr double CHEBY_THRESHOLD = 0.01;
     static void cleanMesh(TetrahedralMesh& _mesh, bool _keepBoundary = false);
     static void cleanQualityQueue(PriorityQueue& _queue, TetrahedralMesh& _mesh);
     static void displayIterationTime(std::chrono::system_clock::time_point& _begin, std::string _name);
@@ -165,7 +174,6 @@ private:
 
     void log(Logger* _logger, bool _endOfLine = false);
     void computeQuality();
-    void multiFace(TetrahedralMesh& _mesh, FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
     TestNeighborResult testNeighbor(TetrahedralMesh& _mesh,
                                     VertexHandle a,
                                     VertexHandle b,
@@ -180,9 +188,6 @@ private:
                        TetLoop::FaceWithChildren _g,
                        FaceHandle _parent,
                        std::vector<CellHandle>& _cellsAdded);
-    void flip32(TetrahedralMesh& _mesh, EdgeHandle _eh, std::vector<CellHandle>& _cellsAdded);
-    void flip23(TetrahedralMesh& _mesh, FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
-    void flip22(TetrahedralMesh& _mesh, FaceHandle _fh, std::vector<CellHandle>& _cellsAdded);
 
     CellHandle findNextCell(Star& _startStar, std::vector<Star>& _galaxy);
     void findCavityBoundary(std::set<HalfFaceHandle> &_cavityBoundary);
@@ -205,6 +210,7 @@ private:
     bool validateWorldMesh(TetrahedralMesh &_mesh);
     double computeQualityDelta(double _before);
     void addToStats(Stats::StatType _statName, double _quality);
+    void saveMesh(TetrahedralMesh &_mesh, std::set<CellHandle> &_cellsToKeep, std::string _name);
 
 private:
     TetrahedralMesh& mesh_;

@@ -2,8 +2,59 @@
 
 // ------------------------------------ 3D ----------------------------------------------
 
+double QualityEvaluation::symmetric_dirichlet_energy(const TetrahedralMesh& mesh,
+                           const std::vector<OpenVolumeMesh::VertexHandle>& _c_verts){
+    Eigen::Matrix3d E;
+    Eigen::MatrixXd P(3,4);
 
-double QualityEvaluation::evaluate(const OpenVolumeMesh::CellHandle _cell, TetrahedralMesh& _mesh, const bool _verbose){
+    if(_c_verts.size() != 4){
+        std::cout << "Assertion failed, too many vertices" << std::endl;
+        return std::numeric_limits<double>::infinity();
+    }
+
+    for(int i(0); i<4; i++){
+        auto v = mesh.vertex(_c_verts[i]);
+        P.col(i)[0] = v[0];
+        P.col(i)[1] = v[1];
+        P.col(i)[2] = v[2];
+    }
+
+    E.col(0) = P.col(1) - P.col(0);
+    E.col(1) = P.col(2) - P.col(0);
+    E.col(2) = P.col(3) - P.col(0);
+
+    //std::cout<<" - E: "<<std::endl<<E<<std::endl;
+
+    std::vector<ACG::Vec3d> p = {{std::sqrt(8.)/3.,  0,  0.0},
+                                 {-std::sqrt(2.)/3., std::sqrt(2./3.), 0.0},
+                                 {-std::sqrt(2.)/3., -std::sqrt(2./3.), 0.0},
+                                 {0,0,1.0+1.0/3.0}};
+
+    Eigen::Matrix<double, 3, 4> P_ref;
+    P_ref<<p[0][0],p[1][0],p[2][0],p[3][0],
+       p[0][1],p[1][1],p[2][1],p[3][1],
+       p[0][2],p[1][2],p[2][2],p[3][2];
+
+    Eigen::Matrix3d E_ref = Eigen::MatrixXd(3,3);
+    E_ref.col(0) = P_ref.col(1) - P_ref.col(0);
+    E_ref.col(1) = P_ref.col(2) - P_ref.col(0);
+    E_ref.col(2) = P_ref.col(3) - P_ref.col(0);
+    Eigen::Matrix3d E_ref_inv = E_ref.inverse();
+
+    Eigen::MatrixXd J = E * E_ref_inv;
+
+    auto d = J.determinant();
+    if(d <= DBL_EPSILON){
+        return std::numeric_limits<double>::infinity();
+    }else{
+        return (J.squaredNorm() + J.inverse().squaredNorm() - 6.0);
+    }
+}
+
+
+double QualityEvaluation::evaluate(const OpenVolumeMesh::CellHandle _cell,
+                                   TetrahedralMesh& _mesh,
+                                   const bool _verbose){
     double quality = 0.;
 
     std::vector<double> edge_lengths;
@@ -16,7 +67,8 @@ double QualityEvaluation::evaluate(const OpenVolumeMesh::CellHandle _cell, Tetra
     for(auto vh: _mesh.get_cell_vertices(_cell)){
         vertices.push_back(vh);
     }
-    quality = computeQuality(_mesh, vertices[0], vertices[1], vertices[2], vertices[3], edge_lengths, _verbose);
+    _verbose;
+    quality = symmetric_dirichlet_energy(_mesh, vertices);
 
     return quality;
 }
@@ -27,27 +79,60 @@ double QualityEvaluation::evaluate(OpenVolumeMesh::VertexHandle _v0,
                                    OpenVolumeMesh::VertexHandle _v3,
                                    TetrahedralMesh& _mesh,
                                    const bool _verbose){
-    double quality = 0.;
-    double edgeLength = 0.;
-    std::vector<double> edge_lengths;
-
-    edgeLength = calculate_edge_length(_mesh, _v0,_v1);
-    edge_lengths.push_back(edgeLength);
-    edgeLength = calculate_edge_length(_mesh, _v0,_v2);
-    edge_lengths.push_back(edgeLength);
-    edgeLength = calculate_edge_length(_mesh, _v0,_v3);
-    edge_lengths.push_back(edgeLength);
-    edgeLength = calculate_edge_length(_mesh, _v1,_v2);
-    edge_lengths.push_back(edgeLength);
-    edgeLength = calculate_edge_length(_mesh, _v1,_v3);
-    edge_lengths.push_back(edgeLength);
-    edgeLength = calculate_edge_length(_mesh, _v2,_v3);
-    edge_lengths.push_back(edgeLength);
-
-    quality = computeQuality(_mesh, _v0, _v1, _v2, _v3, edge_lengths, _verbose);
+    _verbose;
+    std::vector<OpenVolumeMesh::VertexHandle> vertices({_v0,_v1,_v2,_v3});
+    double quality = symmetric_dirichlet_energy(_mesh, vertices);
 
     return quality;
 }
+
+
+
+//double QualityEvaluation::evaluate(const OpenVolumeMesh::CellHandle _cell, TetrahedralMesh& _mesh, const bool _verbose){
+//    double quality = 0.;
+
+//    std::vector<double> edge_lengths;
+//    std::vector<OpenVolumeMesh::VertexHandle> vertices;
+
+//    for(auto ce_it = _mesh.ce_iter(_cell); ce_it.valid(); ++ce_it){
+//        double edgeLength = calculate_edge_length(_mesh, *ce_it);
+//        edge_lengths.push_back(edgeLength);
+//    }
+//    for(auto vh: _mesh.get_cell_vertices(_cell)){
+//        vertices.push_back(vh);
+//    }
+//    quality = computeQuality(_mesh, vertices[0], vertices[1], vertices[2], vertices[3], edge_lengths, _verbose);
+
+//    return quality;
+//}
+
+//double QualityEvaluation::evaluate(OpenVolumeMesh::VertexHandle _v0,
+//                                   OpenVolumeMesh::VertexHandle _v1,
+//                                   OpenVolumeMesh::VertexHandle _v2,
+//                                   OpenVolumeMesh::VertexHandle _v3,
+//                                   TetrahedralMesh& _mesh,
+//                                   const bool _verbose){
+//    double quality = 0.;
+//    double edgeLength = 0.;
+//    std::vector<double> edge_lengths;
+
+//    edgeLength = calculate_edge_length(_mesh, _v0,_v1);
+//    edge_lengths.push_back(edgeLength);
+//    edgeLength = calculate_edge_length(_mesh, _v0,_v2);
+//    edge_lengths.push_back(edgeLength);
+//    edgeLength = calculate_edge_length(_mesh, _v0,_v3);
+//    edge_lengths.push_back(edgeLength);
+//    edgeLength = calculate_edge_length(_mesh, _v1,_v2);
+//    edge_lengths.push_back(edgeLength);
+//    edgeLength = calculate_edge_length(_mesh, _v1,_v3);
+//    edge_lengths.push_back(edgeLength);
+//    edgeLength = calculate_edge_length(_mesh, _v2,_v3);
+//    edge_lengths.push_back(edgeLength);
+
+//    quality = computeQuality(_mesh, _v0, _v1, _v2, _v3, edge_lengths, _verbose);
+
+//    return quality;
+//}
 
 double QualityEvaluation::computeQuality(TetrahedralMesh& _mesh,
                                          OpenVolumeMesh::VertexHandle _v0,
@@ -232,5 +317,5 @@ double QualityEvaluation::calculate_l_rms(std::vector<double> _edge_lengths){
 
 // Can be modified if metric changes
 double QualityEvaluation::getMaxQuality(){
-    return 1.;
+    return 0.;
 }

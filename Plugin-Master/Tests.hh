@@ -3,11 +3,11 @@
 
 #include "TetLoop.hh"
 #include "TetrahedralizedVoxelGridGenerator.hh"
+#include "Experiments3D.hh"
 
-
+using namespace OpenVolumeMesh;
 class Tests
 {
-
 public:
     static bool t_EdgeRemoval();
     static bool t_FaceRemoval();
@@ -17,7 +17,11 @@ public:
     static bool t_StressFaceRemoval();
     static bool t_chebyshev_centroid();
     static bool t_custom_chebyshev_centroid(std::string _filename="mesh_dump0_3D.ovm");
-    static bool t_flip22();
+    static bool t_flip23();
+    static bool t_custom_EdgeRemoval(std::string _filename);
+    static bool t_flip32();
+    static bool t_multiface();
+    static bool t_quality_evaluation();
 private:
     Tests();
     inline static const std::string LOGS_MESH = "../../../../Plugin-Master/logs/meshes/";

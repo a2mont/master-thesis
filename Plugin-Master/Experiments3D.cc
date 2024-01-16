@@ -1,6 +1,6 @@
 #include "Experiments3D.hh"
 
-void Experiment3D::generate_torsion_mesh(double torsion_turns_count){
+void Experiment3D::generate_torsion_mesh(double torsion_turns_count, bool _withRemesh){
 
 //    TetrahedralMesh mesh;
 //    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(10, 10, 10, mesh);
@@ -51,5 +51,7 @@ void Experiment3D::generate_torsion_mesh(double torsion_turns_count){
         mesh_.set_vertex(v, {target_xy[0], target_xy[1], z});
 
     }
-    loop_.loop();
+    if(_withRemesh){
+        loop_.loop();
+    }
 }

@@ -51,7 +51,7 @@ void Smoothing::smooth(TetrahedralMesh& _mesh, OpenVolumeMesh::VertexHandle _vh)
     }
 
     // 0.1 MUST match CHEBY_TRESHOLD from TetLoop
-    bool success = find_chebyshev_center(_mesh, neighbors_opposite_hf, 0.1, pt);
+    bool success = find_chebyshev_center(_mesh, neighbors_opposite_hf, 0.01, pt);
     if(success){
         if(printDebug){
             std::cout << "Smoothing vertex from " << _mesh.vertex(_vh) << " to " << pt << std::endl;

@@ -27,7 +27,7 @@ public:
         q_min_(_q_min)
     {
         if(_logs){
-            logsAddress_ = LOGS_BASE + std::to_string(q_min_).substr(0,4) + LOGS_EXTENSION;
+            logsAddress_ = LOGS_BASE + std::to_string(q_min_).substr(0,6) + LOGS_EXTENSION;
             logger_= new Logger(logsAddress_, q_min_);
         }
 
@@ -44,7 +44,6 @@ public:
         ACG::Vec3d center_;
         std::set<HalfFaceHandle> bounds_;
         std::set<CellHandle> tets_;
-        std::map<HalfFaceHandle, std::vector<VertexHandle>> surfaceDict_;
         std::vector<std::vector<VertexHandle>> reconstructionVectors_;
         Star(std::set<CellHandle> _tets) :
             tets_(_tets){}
@@ -55,14 +54,6 @@ public:
             center_(_center),
             bounds_(_bounds),
             tets_(_tets){}
-        Star(std::set<CellHandle> _tets,
-                std::set<HalfFaceHandle> _bounds,
-                ACG::Vec3d _center,std::map<HalfFaceHandle,
-                std::vector<VertexHandle>> _surfaceDict) :
-            center_(_center),
-            bounds_(_bounds),
-            tets_(_tets),
-            surfaceDict_(_surfaceDict){}
         Star(){}
         void describe() const {    std::cout << "-Star\n\t-Center = " <<
                                                 center_ << "\n\t-Bounds = "<<

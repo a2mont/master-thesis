@@ -33,7 +33,7 @@ void MasterPlugin::pluginsInitialized(){
 //        std::string name = "mesh_dump" + std::to_string(i) + "_3D.ovm";
 //        Tests::t_custom_chebyshev_centroid(name);
 //    }
-//    Tests::runAll();
+    Tests::runAll();
 //    tool_->beginExpButton->click();
 //    for(int i = 0; i < 5; ++i){
 //        tool_->nextButton->click();
@@ -361,7 +361,7 @@ void MasterPlugin::slot_experiment_loop(){
          o_it != PluginFunctions::objectsEnd(); ++o_it) {
         auto *tet_obj = PluginFunctions::tetrahedralMeshObject(*o_it);
         auto *tetmesh = tet_obj->mesh();
-        double nbLoops = 1.25;
+        double nbLoops = 1.5;
         experiment3D_->generate_torsion_mesh(nbLoops/timesteps_);
         ++t_;
 

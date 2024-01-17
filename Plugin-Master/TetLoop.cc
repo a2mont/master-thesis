@@ -71,7 +71,7 @@ void TetLoop::improve_tet(Tet _t){
     // A <- t, a triangle from the mesh
     PriorityQueue A;
     A.push(_t);
-    bool topo_active(false), contraction_active(true), insertion_active(false), smoothing_active(false);
+    bool topo_active(true), contraction_active(true), insertion_active(true), smoothing_active(true);
     bool changed;
     bool printDebug(false);
     if(printDebug){
@@ -302,8 +302,12 @@ bool TetLoop::edgeRemoval(EdgeHandle _eh, bool _verbose){
 
 bool TetLoop::edgeRemoval(EdgeHandle _eh, std::vector<CellHandle>& _cellsAdded, bool _verbose){
     bool changed = false;
-    if(mesh_.is_deleted(_eh) || mesh_.is_boundary(_eh))
+    if(mesh_.is_deleted(_eh) || mesh_.is_boundary(_eh)){
+        if(_verbose){
+            std::cout << "Edge removal on a deleted/boundary edge" << std::endl;
+        }
         return changed;
+    }
 
     // let I the set of tets including eh
     std::set<CellHandle> tetsIncludingEdge;
@@ -480,7 +484,7 @@ bool TetLoop::faceRemoval(FaceHandle _fh, std::vector<CellHandle>& _cellsAdded, 
     computeQuality(tempQueue, mesh_);
     double q_old = tempQueue.top().quality_;
     double q_max = q_old;
-    double q_new = q_old;
+    double q_new;
 
     flip23(tempMesh,_fh, addedTets[0]);
     // Quality after 2-3 flip
@@ -498,8 +502,8 @@ bool TetLoop::faceRemoval(FaceHandle _fh, std::vector<CellHandle>& _cellsAdded, 
                          "added tets: "<< addedTets[0].size() << std::endl;
         }
     }
-    tempMesh = mesh_;
 
+//    tempMesh = mesh_;
 //    multiFace(tempMesh,_fh, addedTets[1]);
 //    computeQuality(tempQueue, tempMesh);
 //    q_new = tempQueue.top().quality_;
@@ -796,9 +800,9 @@ void TetLoop::flip23(TetrahedralMesh& _mesh,
                      FaceHandle _fh,
                      std::vector<CellHandle>& _cellsAdded){
     bool printDebug(false);
-    if(_mesh.is_deleted(_fh)){
+    if(_mesh.is_deleted(_fh) || _mesh.is_boundary(_fh)){
         if(printDebug){
-            std::cout << "2-3 flip on a deleted face" << std::endl;
+            std::cout << "2-3 flip on a deleted/boundary face" << std::endl;
         }
         return;
     }
@@ -818,6 +822,9 @@ void TetLoop::flip23(TetrahedralMesh& _mesh,
     auto hfh_opp = _mesh.opposite_halfface_handle(hfh);
     auto vh_opp = _mesh.halfface_opposite_vertex(hfh_opp);
 
+    if(!vh_opp.is_valid()){
+        std::cout << "text" << std::endl;
+    }
     auto temp = _mesh;
     auto newVertex = temp.split_face(_fh);
     auto heToCollapse = temp.find_halfedge(newVertex, toVertex);
@@ -1044,9 +1051,6 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
     bool saveMesh(false);
     bool printDebug(false);
 
-    for(auto hfh: mesh_.halffaces()){
-        cavityEdge_[hfh] = false;
-    }
     std::vector<CellHandle> cellsToAdd;
     std::vector<Star> galaxy;
     std::vector<Star> galaxy_wm;
@@ -1060,6 +1064,10 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
     computeQuality(queueCopy, copy);
     //    for each inverted tetrahedron 𝑐 ∈ 𝐶
     while(!_A.empty()){
+        for(auto hfh: mesh_.halffaces()){
+            cavityEdge_[hfh] = false;
+        }
+
         auto top = _A.top();
         _A.pop();
         auto ch = top.cell_handle_;
@@ -1090,6 +1098,8 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
             }
             if(opp.is_valid()){
                 newStar.bounds_.insert(opp);
+            }else{
+                std::cout << "Non valid halfface added to star bounds" << std::endl;
             }
         }
         if(newStar.bounds_.size() == 4){
@@ -1133,7 +1143,7 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
             if(saveMesh){
                 cavityMesh3D(star);
             }
-            // If center fails (cell is too small to find a cheby center), cancel
+            // If center fails (e.g. single cell is too small to find a cheby center), cancel
             _A = tempA;
             return;
         }
@@ -1141,13 +1151,18 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
             if(mesh_.is_deleted(hfh)){
                 std::cout<<" star bounds hf is deleted"<<std::endl;
             }
-//            ACG::Vec3d normal, centroid;
-//            triangle_normal_and_centroid(mesh_, hfh,
-//                                         normal, centroid);
+            ACG::Vec3d normal, centroid;
+            triangle_normal_and_centroid(mesh_, hfh,
+                                         normal, centroid);
 
 //            if(mesh_.is_boundary(hfh)){
 //                std::cout<<" added boundary hf "<<vectorToString(mesh_.get_halfface_vertices(hfh))
 //                        <<" with centroid "<<centroid<<" and normal "<<normal<<std::endl;
+//                if(std::abs(normal[0]) == 1 || std::abs(normal[1]) == 1 || std::abs(normal[2]) == 1){
+//                    cavityMesh3D(star);
+//                    printIterable(star.bounds_);
+//                    exit(0);
+//                }
 //            }
             // add vertices for cell reconstruction
             auto vertices = mesh_.get_halfface_vertices(hfh);
@@ -1164,17 +1179,6 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
                 std::cout << "Already deleted cell: " << ch << std::endl;
                 continue;
             }
-            //            if(mesh_.is_boundary(ch)){
-            //                for(auto c_hf: mesh_.cell_halffaces(ch)){
-            //                    auto opp = mesh_.opposite_halfface_handle(c_hf);
-            //                    if(mesh_.is_boundary(opp)){
-            //                        auto verts = mesh_.get_halfface_vertices(opp);
-            //                        star.surfaceDict_[opp] = std::vector<VertexHandle>(verts);
-
-            //                    }
-            //                }
-            //            }
-
             if(useWorldSpace_){
                 wm_temp.delete_cell(ch);
                 cleanMesh(wm_temp);
@@ -1196,7 +1200,7 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
     // Remplir la galaxy
     // for each star
     // 1. compute center of cheby and add point
-    // 2. fill with vertices from boundary (halfface.get_vertices + newPoint)
+    // 2. fill with vertices from boundary (reconstruction vertices + newPoint)
     for(int i = 0; i < galaxy.size(); ++i){
         auto& star = galaxy[i];
         int added_size(0);
@@ -1216,14 +1220,7 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
                 continue;
             }
             auto added = mesh_.add_cell(vertices[0], vertices[2], vertices[1], newVertex);
-//            for(auto chf_it = mesh_.chf_iter(added); chf_it.valid(); chf_it++){
-//                if(mesh_.is_boundary(*chf_it)){
-//                    ACG::Vec3d normal, centroid;
 
-//                    std::cout<<" reconstructed boundary hf "<<vectorToString(mesh_.get_halfface_vertices(*chf_it))
-//                            <<" with centroid "<<centroid<<" and normal "<<normal<<std::endl;
-//                }
-//            }
             Smoothing::smooth(mesh_, newVertex);
             //            std::cout << "Added cell "<< added.idx() << " valid = "<< added.is_valid() << std::endl;
             if(added.is_valid()){
@@ -1235,18 +1232,6 @@ void TetLoop::insertion_pass(PriorityQueue& _A){
             std::cout << "Added size: "<< added_size <<
                          " Recons vector size: "<< star.reconstructionVectors_.size() << std::endl;
         }
-
-        //        std::vector<VertexHandle> vertices;
-        //        for(auto bound: star.bounds_){
-        //            if(mesh_.is_deleted(bound)){
-        //                if(star.surfaceDict_.find(bound) == star.surfaceDict_.end()){
-        //                    continue;
-        //                }
-        //                vertices = star.surfaceDict_[bound];
-
-        //            }else{
-        //                vertices = mesh_.get_halfface_vertices(bound);
-        //            }
         //            // ensure operation is valid in world space
         ////            if(useWorldSpace_){
         ////                Point center_wm = {0,0,0};
@@ -1340,7 +1325,7 @@ void TetLoop::recoverBadStar(Star& _star, std::string _meshName){
 
 void TetLoop::compareStarWithMesh(Star& _star, TetrahedralMesh& _mesh){
     findCavityBoundary(_star);
-    find_chebyshev_center(mesh_, _star.bounds_, CHEBY_THRESHOLD, _star.center_, true);
+    find_chebyshev_center(mesh_, _star.bounds_, CHEBY_THRESHOLD, _star.center_);
 
     std::set<HalfFaceHandle> hfs;
     for(auto hf:_mesh.halffaces()){
@@ -1349,8 +1334,7 @@ void TetLoop::compareStarWithMesh(Star& _star, TetrahedralMesh& _mesh){
         }
     }
     ACG::Vec3d new_pos;
-    std::cout << "\n" << std::endl;
-    find_chebyshev_center(_mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos, true);
+    find_chebyshev_center(_mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos);
 
     std::cout << "Comparison between star and mesh:\n-Star\n\t-Center = " <<
                  _star.center_ << "\n\t-Bounds = "<<
@@ -1365,6 +1349,27 @@ void TetLoop::compareStarWithMesh(Star& _star, TetrahedralMesh& _mesh){
                  iterableToString<std::pair<CellIter, CellIter>>(_mesh.cells())
                                                              << " (total= "<< _mesh.n_logical_cells() << ")"
                                                              << std::endl;
+    if(_star.bounds_.size() != hfs.size()){
+        std::cout << "Inequal bound size !!: Star "<< _star.bounds_.size()
+                  << " vs Mesh "<< hfs.size() << std::endl;
+        std::cout << "Boundary halffaces in star:" << std::endl;
+        for(auto hfh: _star.bounds_){
+            if (mesh_.is_boundary(hfh)){
+                std::cout << hfh <<", ";
+
+            }
+        }
+        TetrahedralMesh copy = mesh_;
+
+        copy.collect_garbage();
+
+        OpenVolumeMesh::IO::FileManager fm;
+        std::string name = "mesh_dump_bounds_3D.ovm";
+        fm.writeFile(LOGS_MESH + name, copy);
+        std::cout << "Created file "<< name << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
 }
 
 
@@ -1399,12 +1404,16 @@ bool TetLoop::checkStarConditions(Star& _star, CellHandle _lastAdded){
         Star starCopy_wm = _star;
         printIterable(starCopy_wm.bounds_);
         findCavityBoundary(starCopy_wm, true);
-        isValid = find_chebyshev_center(world_mesh_, starCopy_wm.bounds_, CHEBY_THRESHOLD, starCopy_wm.center_);
+        isValid = find_chebyshev_center(world_mesh_, starCopy_wm.bounds_,
+                                        CHEBY_THRESHOLD, starCopy_wm.center_);
         std::cout << "Valid after world mesh cheby check: "<< isValid << std::endl;
     }
     if(!isValid){
         if(printDebug){
             std::cout << "Cheby check failed, revert to previous values" << std::endl;
+        }
+        for(auto hfh: mesh_.cell_halffaces(_lastAdded)){
+            cavityEdge_[hfh] = false;
         }
         _star.tets_.erase(_lastAdded);
         findCavityBoundary(_star);
@@ -1755,6 +1764,11 @@ void TetLoop::cavityMesh3D(Star& _star){
             }
         }
     }
+    if(printDebug){
+        for(auto line: table){
+            std::cout << line.first << " -> "<< line.second << std::endl;
+        }
+    }
     for(auto ch: toAdd){
         auto verts = mesh_.get_cell_vertices(ch);
         auto c = copy.add_cell(
@@ -1762,7 +1776,11 @@ void TetLoop::cavityMesh3D(Star& _star){
                 table[verts[1]],
                 table[verts[2]],
                 table[verts[3]]);
-        std::cout<<" added cell "<<c<<": "<<iterableToString<std::vector<VertexHandle>>(copy.get_cell_vertices(c))<<std::endl;
+        if(printDebug){
+            std::cout<<" added cell "<<c<<": "<<
+                       iterableToString<std::vector<VertexHandle>>
+                       (copy.get_cell_vertices(c))<<std::endl;
+        }
     }
     if(printDebug){
         std::cout << "Copy with:\n\t-"<<
@@ -1774,18 +1792,63 @@ void TetLoop::cavityMesh3D(Star& _star){
     }
     copy.collect_garbage();
 
-    std::cout<<" copy #vertices: "<<copy.n_vertices()<<std::endl;
-    std::cout<<" copy cells: "<<std::endl;
-    for(auto c: copy.cells()){
-        std::cout<<" - "<<c<<": "<<iterableToString<std::vector<VertexHandle>>(copy.get_cell_vertices(c))<<std::endl;
+
+    for(auto hfh: _star.bounds_){
+        auto vertices = mesh_.get_halfface_vertices(hfh);
+        std::vector<VertexHandle> v_vec({table[vertices[0]],table[vertices[1]], table[vertices[2]]});
+        HalfFaceHandle hf_copy = copy.find_halfface(v_vec);
+        std::cout << "Halfface "<< hfh << " -> "<< hf_copy << std::endl;
+    }
+    for(auto hfh: copy.halffaces()){
+        if(copy.is_boundary(hfh)){
+            auto vertices_copy = copy.get_halfface_vertices(hfh);
+            std::vector<VertexHandle> vertices;
+            HalfFaceHandle key(-1);
+            for(auto vh: vertices_copy){
+                for(auto pair: table){
+                    if(pair.second == vh){
+                        vertices.push_back(pair.first);
+                    }
+                }
+            }
+            key = mesh_.find_halfface(vertices);
+            if(_star.bounds_.find(key) == _star.bounds_.end()){
+                std::cout << "Mesh Hface "<< hfh
+                          << " is boundary, Star Hface "<< key << " is not on star boundary"<< std::endl;
+                std::cout << "Cavity edge property for "<< key <<": "<< cavityEdge_[key] << std::endl;
+                auto temp = mesh_;
+                auto cell = mesh_.incident_cell(key);
+                for(auto ch: temp.cells()){
+                    if(ch != cell){
+                        temp.delete_cell(ch);
+                    }
+                }
+                temp.collect_garbage();
+
+                OpenVolumeMesh::IO::FileManager fm;
+                std::string name = "star_only_boundary_3D.ovm";
+                fm.writeFile(LOGS_MESH + name, temp);
+
+
+            }
+
+        }
+    }
+
+    if(printDebug){
+        std::cout<<" copy #vertices: "<<copy.n_vertices()<<std::endl;
+        std::cout<<" copy cells: "<<std::endl;
+        for(auto c: copy.cells()){
+            std::cout<<" - "<<c<<": "<<iterableToString<std::vector<VertexHandle>>(copy.get_cell_vertices(c))<<std::endl;
+        }
     }
 
     OpenVolumeMesh::IO::FileManager fm;
     std::string name = "mesh_dump" + std::to_string(fileId++) + "_3D.ovm";
     fm.writeFile(LOGS_MESH + name, copy);
     std::cout << "Created file "<< name << std::endl;
-    //    compareStarWithMesh(_star, copy);
-    recoverBadStar(_star, name);
+    compareStarWithMesh(_star, copy);
+//    recoverBadStar(_star, name);
 }
 
 /**

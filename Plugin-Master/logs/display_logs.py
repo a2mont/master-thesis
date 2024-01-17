@@ -49,19 +49,19 @@ def plot_quality(q_mins: list, qualities: list):
             id_col = i % cols
             ax[id_row, id_col].plot(x,y)
             ax[id_row, id_col].set_title(f'Quality min={q_min}')
-            ax[id_row, id_col].text(-1,q_min + 0.01, f'{q_min}', color='r')
+            ax[id_row, id_col].text(-1.5,q_min + 0.1, f'{q_min}', color='r')
             ax[id_row, id_col].axhline(y=float(q_min), color='r', alpha=0.5, linestyle='dashed', label='Minimal quality')
             ax[id_row, id_col].legend()
         elif cols > 1:
             ax[i].plot(x,y)
             ax[i].set_title(f'Quality min={q_min}')
-            ax[i].text(-1,q_min + 0.01, f'{q_min}', color='r')
+            ax[i].text(-1.5,q_min + 0.1, f'{q_min}', color='r')
             ax[i].axhline(y=float(q_min), color='r', alpha=0.5, linestyle='dashed', label='Minimal quality')
             ax[i].legend()
         else:
             ax.plot(x,y)
             ax.set_title(f'Quality min={q_min}')
-            ax.text(-1,q_min + 0.01, f'{q_min}', color='r')
+            ax.text(-1.5,q_min + 0.1, f'{q_min}', color='r')
             ax.axhline(y=float(q_min), color='r', alpha=0.5, linestyle='dashed', label='Minimal quality')
             ax.legend()
 

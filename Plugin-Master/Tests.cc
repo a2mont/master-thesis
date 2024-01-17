@@ -35,7 +35,10 @@ bool Tests::t_EdgeRemoval()
     TetLoop::reset_queue(queue);
 
     TetLoop loop(mesh, 0.4, cv);
+    auto begin = std::chrono::high_resolution_clock::now();
     loop.edgeRemoval(edgeToRemove, added, true);
+    TetLoop::displayIterationTime(begin, "Edge removal test");
+
 
     TetLoop::computeQuality(queue, mesh);
     qualityAfter = queue.top().quality_;
@@ -93,7 +96,10 @@ bool Tests::t_custom_EdgeRemoval(std::string _filename)
     TetLoop::reset_queue(queue);
 
     TetLoop loop(mesh, 0.4, cv);
+    auto begin = std::chrono::high_resolution_clock::now();
     loop.edgeRemoval(edgeToRemove, added, true);
+    TetLoop::displayIterationTime(begin, "Edge removal test");
+
     TetLoop::computeQuality(queue, mesh);
     qualityAfter = queue.top().quality_;
 
@@ -160,11 +166,11 @@ bool Tests::t_FaceRemoval(){
     double qualityAfter = 0;
     std::map<int,int> cv = {{0,0}};
 
-    auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  0,  0));
-    auto v1 = mesh.add_vertex(ACG::Vec3d(-5,  5,  5));
-    auto v2 = mesh.add_vertex(ACG::Vec3d( 0,  5, -1));
-    auto v3 = mesh.add_vertex(ACG::Vec3d( 5,  5,  5));
-    auto v4 = mesh.add_vertex(ACG::Vec3d( 0, 10,  0));
+    auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  -10,  0));
+    auto v1 = mesh.add_vertex(ACG::Vec3d(-10,  0.5,  10));
+    auto v2 = mesh.add_vertex(ACG::Vec3d( 0,  0.5, -10));
+    auto v3 = mesh.add_vertex(ACG::Vec3d( 10,  0.5,  10));
+    auto v4 = mesh.add_vertex(ACG::Vec3d( 0, 1,  0));
 
 
     mesh.add_cell(v1,v2,v3,v0, true);
@@ -175,7 +181,10 @@ bool Tests::t_FaceRemoval(){
     TetLoop::reset_queue(queue);
 
     TetLoop loop(mesh, 0.4, cv);
+    auto begin = std::chrono::high_resolution_clock::now();
     loop.faceRemoval(FaceHandle(0), true);
+    TetLoop::displayIterationTime(begin, "Face removal test");
+
 
 
     TetLoop::computeQuality(queue, mesh);
@@ -185,6 +194,7 @@ bool Tests::t_FaceRemoval(){
         cellNb++;
     }
 
+    std::cout << "Quality: "<< qualityBefore << " -> " << qualityAfter << std::endl;
     if(qualityAfter <= qualityBefore){
         std::cout << "\033[1;31m X Quality should improve after operation!\n\033[0m" << std::endl;
         return false;
@@ -246,11 +256,11 @@ bool Tests::t_flip23(){
     double qualityAfter = 0;
     std::map<int,int> cv = {{0,0}};
 
-    auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  0,  0));
-    auto v1 = mesh.add_vertex(ACG::Vec3d(-10,  2.5,  10));
-    auto v2 = mesh.add_vertex(ACG::Vec3d( 0,  2.5, -10));
-    auto v3 = mesh.add_vertex(ACG::Vec3d( 10,  2.5,  10));
-    auto v4 = mesh.add_vertex(ACG::Vec3d( 0, 5,  0));
+    auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  -10,  0));
+    auto v1 = mesh.add_vertex(ACG::Vec3d(-10,  0.5,  10));
+    auto v2 = mesh.add_vertex(ACG::Vec3d( 0,  0.5, -10));
+    auto v3 = mesh.add_vertex(ACG::Vec3d( 10,  0.5,  10));
+    auto v4 = mesh.add_vertex(ACG::Vec3d( 0, 1,  0));
 
 
     mesh.add_cell(v1,v2,v3,v0, true);
@@ -270,8 +280,9 @@ bool Tests::t_flip23(){
 
     std::vector<CellHandle> added;
     TetLoop loop(mesh, 0.4, cv);
+    auto begin = std::chrono::high_resolution_clock::now();
     loop.flip23(mesh, toRemove, added);
-
+    TetLoop::displayIterationTime(begin, "2-3 flip test");
 
     TetLoop::computeQuality(queue, mesh);
     qualityAfter = queue.top().quality_;
@@ -280,11 +291,12 @@ bool Tests::t_flip23(){
         cellNb++;
     }
 
-//    if(qualityAfter <= qualityBefore){
-//        std::cout << "\033[1;31m X Quality should improve after operation! Quality: "
-//                  << qualityBefore<< " -> "<< qualityAfter <<"\n\033[0m" << std::endl;
-//        return false;
-//    }
+    std::cout << "Quality: "<< qualityBefore << " -> " << qualityAfter << std::endl;
+    if(qualityAfter <= qualityBefore){
+        std::cout << "\033[1;31m X Quality should improve after operation! Quality: "
+                  << qualityBefore<< " -> "<< qualityAfter <<"\n\033[0m" << std::endl;
+        return false;
+    }
     if(cellNb != 3){
         std::cout << "\033[1;31m X Only 3 cells should remain! Cell number:"<< cellNb
                   << "\n\033[0m" << std::endl;
@@ -337,7 +349,10 @@ bool Tests::t_flip32(){
     TetLoop::reset_queue(queue);
 
     TetLoop loop(mesh, 0.4, cv);
+    auto begin = std::chrono::high_resolution_clock::now();
     loop.flip32(mesh,edgeToRemove, added);
+    TetLoop::displayIterationTime(begin, "3-2 flip test");
+
 
     TetLoop::computeQuality(queue, mesh);
     qualityAfter = queue.top().quality_;
@@ -346,6 +361,7 @@ bool Tests::t_flip32(){
         cellNb++;
     }
 
+    std::cout << "Quality: "<< qualityBefore << " -> " << qualityAfter << std::endl;
     if(qualityAfter <= qualityBefore){
         std::cout << "\033[1;31m X Quality should improve after operation! Quality: "
                   << qualityBefore<< " -> "<< qualityAfter <<"\n\033[0m" << std::endl;
@@ -381,11 +397,11 @@ bool Tests::t_multiface(){
     double qualityAfter = 0;
     std::map<int,int> cv = {{0,0}};
 
-    auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  0,  0));
-    auto v1 = mesh.add_vertex(ACG::Vec3d(-10,  2.5,  10));
-    auto v2 = mesh.add_vertex(ACG::Vec3d( 0,  2.5, -10));
-    auto v3 = mesh.add_vertex(ACG::Vec3d( 10,  2.5,  10));
-    auto v4 = mesh.add_vertex(ACG::Vec3d( 0, 5,  0));
+    auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  -10,  0));
+    auto v1 = mesh.add_vertex(ACG::Vec3d(-10,  0.5,  10));
+    auto v2 = mesh.add_vertex(ACG::Vec3d( 0,  0.5, -10));
+    auto v3 = mesh.add_vertex(ACG::Vec3d( 10,  0.5,  10));
+    auto v4 = mesh.add_vertex(ACG::Vec3d( 0, 1,  0));
 
 
     mesh.add_cell(v1,v2,v3,v0, true);
@@ -405,7 +421,9 @@ bool Tests::t_multiface(){
 
     std::vector<CellHandle> added;
     TetLoop loop(mesh, 0.4, cv);
+    auto begin = std::chrono::high_resolution_clock::now();
     loop.multiFace(mesh, toRemove, added);
+    TetLoop::displayIterationTime(begin, "Multiface flip test");
 
 
     TetLoop::computeQuality(queue, mesh);
@@ -415,17 +433,19 @@ bool Tests::t_multiface(){
         cellNb++;
     }
 
-//    if(qualityAfter <= qualityBefore){
-//        std::cout << "\033[1;31m X Quality should improve after operation! Quality: "
-//                  << qualityBefore<< " -> "<< qualityAfter <<"\n\033[0m" << std::endl;
-//        return false;
-//    }
+    std::cout << "Quality: "<< qualityBefore << " -> " << qualityAfter << std::endl;
+    if(qualityAfter <= qualityBefore){
+        std::cout << "\033[1;31m X Quality should improve after operation! Quality: "
+                  << qualityBefore<< " -> "<< qualityAfter <<"\n\033[0m" << std::endl;
+        return false;
+    }
     if(cellNb != 3){
         std::cout << "\033[1;31m X Only 3 cells should remain! Cell number:"<< cellNb
                   << "\n\033[0m" << std::endl;
         return false;
     }
 
+    std::cout << "Added cells: "<< TetLoop::vectorToString<CellHandle>(added) << std::endl;
     if(added.size() != 3){
         std::cout << "\033[1;31m X Only 3 cells should be added ! added: "<< added.size()
                   <<"\n\033[0m" << std::endl;
@@ -506,7 +526,11 @@ bool Tests::t_chebyshev_centroid(){
     }
 
     ACG::Vec3d new_pos;
-    bool cheb_result = loop.find_chebyshev_center(mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos);
+    auto begin = std::chrono::high_resolution_clock::now();
+    bool cheb_result =
+            loop.find_chebyshev_center(mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos);
+    TetLoop::displayIterationTime(begin, "Cheby center test");
+
 
     if(!cheb_result){
         std::cout << "\033[1;31m X Failed to find cheby center \n\033[0m" << std::endl;
@@ -535,7 +559,8 @@ bool Tests::t_custom_chebyshev_centroid(std::string _filename){
             hfs.insert(hf);
         }
     }
-//    std::cout << "Bounds:\n" << TetLoop::setToString<HalfFaceHandle>(hfs)<< std::endl;
+    std::cout << "Bounds size:" << hfs.size()<< std::endl;
+
 
     ACG::Vec3d new_pos;
     auto cheb_result = loop.find_chebyshev_center(mesh, hfs, TetLoop::CHEBY_THRESHOLD, new_pos);
@@ -615,17 +640,17 @@ bool Tests::t_quality_evaluation(){
 
 bool Tests::runAll(){
     std::cout << "\033[1;35mRun all tests\n" << std::endl;
-    bool passed(false), edge(false), face(false),
+    bool passed(false), edge(false), multiface(false),
             flip23(false), flip32(false),cheby(false);
 
     edge        = t_EdgeRemoval();
-    face        = t_FaceRemoval();
+    multiface   = t_multiface();
     flip23      = t_flip23();
     flip32      = t_flip32();
     cheby       = t_chebyshev_centroid();
     passed =
             edge &&
-            face &&
+            multiface &&
             cheby &&
             flip32 &&
             flip23

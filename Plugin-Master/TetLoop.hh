@@ -115,11 +115,20 @@ private:
 
 public:
     void loop(int _max_iter=1);
-    bool edgeRemoval(EdgeHandle _eh, std::vector<CellHandle>& _cellsAdded, bool _verbose = true);
-    bool edgeRemoval(EdgeHandle _eh, bool _verbose = true);
-    bool faceRemoval(FaceHandle _fh, std::vector<CellHandle>& _cellsAdded, std::vector<int>& _counter, bool _verbose = true);
-    bool faceRemoval(FaceHandle _fh, bool _verbose = true);
-    VertexHandle contractEdge(EdgeHandle _eh, std::vector<CellHandle>& _tetsAltered);
+    bool edgeRemoval(EdgeHandle _eh,
+                     std::vector<CellHandle>& _cellsAdded,
+                     double& _qualityDelta,
+                     bool _verbose = true);
+    bool edgeRemoval(EdgeHandle _eh, double& _qualityDelta, bool _verbose = true);
+    bool faceRemoval(FaceHandle _fh,
+                     std::vector<CellHandle>& _cellsAdded,
+                     std::vector<int>& _counter,
+                     double& _qualityDelta,
+                     bool _verbose = true);
+    bool faceRemoval(FaceHandle _fh, double& _qualityDelta, bool _verbose = true);
+    VertexHandle contractEdge(EdgeHandle _eh,
+                              std::vector<CellHandle>& _tetsAltered,
+                              double& _qualityDelta);
     bool find_chebyshev_center(const TetrahedralMesh &_mesh,
                                const std::set<HalfFaceHandle> &constraint_hfs,
                                const double radius_lower_bound,
@@ -155,10 +164,10 @@ public:
     static void logStats(Stats _stats, Logger& _logger);
 private:
 
-    bool topologial_pass(PriorityQueue& _A);
-    void edge_contraction_pass(PriorityQueue& _A);
-    void insertion_pass(PriorityQueue& _A);
-    void smoothing_pass(PriorityQueue& _A, int _iterations = 1);
+    bool topological_pass(PriorityQueue& _A, double& _qualityDelta);
+    void edge_contraction_pass(PriorityQueue& _A, double& _qualityDelta);
+    void insertion_pass(PriorityQueue& _A, double& _qualityDelta);
+    void smoothing_pass(PriorityQueue& _A, double& _qualityDelta, int _iterations = 1);
 
     void improve_mesh(PriorityQueue& _badTets);
     void improve_tet(Tet _t);
@@ -180,7 +189,7 @@ private:
                        FaceHandle _parent,
                        std::vector<CellHandle>& _cellsAdded);
 
-    CellHandle findNextCell(Star& _startStar, std::vector<Star>& _galaxy);
+    CellHandle findNextCell(Star& _startStar, std::vector<Star>& _galaxy, bool& _resultsLeft);
     void findCavityBoundary(std::set<HalfFaceHandle> &_cavityBoundary);
     void findCavityBoundary(Star& _constraint, bool _isWorldMesh = false);
     bool checkStarConditions(Star& _star, CellHandle _lastAdded);

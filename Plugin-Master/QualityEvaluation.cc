@@ -8,7 +8,7 @@ double QualityEvaluation::symmetric_dirichlet_energy(const TetrahedralMesh& mesh
     Eigen::MatrixXd P(3,4);
 
     if(_c_verts.size() != 4){
-        std::cout << "Assertion failed, too many vertices" << std::endl;
+        std::cout << "\033[1;31mAssertion failed, too many vertices: \033[0m"<< _c_verts.size() << std::endl;
         return std::numeric_limits<double>::infinity();
     }
 
@@ -57,18 +57,13 @@ double QualityEvaluation::evaluate(const OpenVolumeMesh::CellHandle _cell,
                                    const bool _verbose){
     double quality = 0.;
 
-    std::vector<double> edge_lengths;
     std::vector<OpenVolumeMesh::VertexHandle> vertices;
 
-    for(auto ce_it = _mesh.ce_iter(_cell); ce_it.valid(); ++ce_it){
-        double edgeLength = calculate_edge_length(_mesh, *ce_it);
-        edge_lengths.push_back(edgeLength);
-    }
     for(auto vh: _mesh.get_cell_vertices(_cell)){
         vertices.push_back(vh);
     }
     _verbose;
-    quality = symmetric_dirichlet_energy(_mesh, vertices);
+    quality = -symmetric_dirichlet_energy(_mesh, vertices);
 
     return quality;
 }
@@ -81,7 +76,7 @@ double QualityEvaluation::evaluate(OpenVolumeMesh::VertexHandle _v0,
                                    const bool _verbose){
     _verbose;
     std::vector<OpenVolumeMesh::VertexHandle> vertices({_v0,_v1,_v2,_v3});
-    double quality = symmetric_dirichlet_energy(_mesh, vertices);
+    double quality = -symmetric_dirichlet_energy(_mesh, vertices);
 
     return quality;
 }
@@ -240,6 +235,27 @@ double QualityEvaluation::calculate_volume(TetrahedralMesh& _mesh,
     return volume;
 }
 
+
+void QualityEvaluation::scaleMesh(TetrahedralMesh& _mesh){
+    using namespace OpenVolumeMesh;
+    CellHandle cell(0);
+    bool printDebug(true);
+    double volume = calculate_volume(_mesh, cell);
+    double scaleFactor = std::cbrt(1/volume);
+    if(printDebug){
+        std::cout << "-Volume: "<< volume << "\t-Scaling factor: "<< scaleFactor << std::endl;
+    }
+    for(auto vh: _mesh.vertices()){
+        ACG::Vec3d point = _mesh.vertex(vh);
+        point *= scaleFactor;
+        _mesh.set_vertex(vh, point);
+    }
+    if(printDebug){
+        volume = calculate_volume(_mesh, cell);
+        std::cout << "Volume after operation: "<< volume << std::endl;
+    }
+}
+
 // ------------------------------------ 2D ----------------------------------------------
 
 double QualityEvaluation::evaluate(const OpenMesh::SmartFaceHandle _face, TriMesh& _mesh, const bool _verbose){
@@ -319,3 +335,5 @@ double QualityEvaluation::calculate_l_rms(std::vector<double> _edge_lengths){
 double QualityEvaluation::getMaxQuality(){
     return 0.;
 }
+
+

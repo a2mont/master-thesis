@@ -11,6 +11,7 @@ bool Tests::t_EdgeRemoval()
     int cellNb = 0;
     double qualityBefore = 0;
     double qualityAfter = 0;
+    double qualityDelta  = 0;
     std::map<int,int> cv = {{0,0}};
 
     auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  0,  0));
@@ -32,11 +33,10 @@ bool Tests::t_EdgeRemoval()
 
     TetLoop::computeQuality(queue, mesh);
     qualityBefore = queue.top().quality_;
-    TetLoop::reset_queue(queue);
 
     TetLoop loop(mesh, 0.4, cv);
     auto begin = std::chrono::high_resolution_clock::now();
-    loop.edgeRemoval(edgeToRemove, added, true);
+    loop.edgeRemoval(edgeToRemove, added, qualityDelta, true);
     TetLoop::displayIterationTime(begin, "Edge removal test");
 
 
@@ -48,6 +48,7 @@ bool Tests::t_EdgeRemoval()
     }
 
     std::cout << "Quality: "<< qualityBefore << " -> " << qualityAfter << std::endl;
+    std::cout << "\t-Delta: "<< qualityDelta << std::endl;
     if(qualityAfter <= qualityBefore){
         std::cout << "\033[1;31m X Quality should improve after operation!\n\033[0m" << std::endl;
         return false;
@@ -78,7 +79,8 @@ bool Tests::t_custom_EdgeRemoval(std::string _filename)
     std::vector<CellHandle> added;
     int cellNb = 0;
     double qualityBefore = 0;
-    double qualityAfter = 0;
+    double qualityAfter  = 0;
+    double qualityDelta  = 0;
     std::map<int,int> cv = {{0,0}};
 
     OpenVolumeMesh::IO::FileManager fileManager;
@@ -93,11 +95,10 @@ bool Tests::t_custom_EdgeRemoval(std::string _filename)
 
     TetLoop::computeQuality(queue, mesh);
     qualityBefore = queue.top().quality_;
-    TetLoop::reset_queue(queue);
 
     TetLoop loop(mesh, 0.4, cv);
     auto begin = std::chrono::high_resolution_clock::now();
-    loop.edgeRemoval(edgeToRemove, added, true);
+    loop.edgeRemoval(edgeToRemove, added, qualityDelta, true);
     TetLoop::displayIterationTime(begin, "Edge removal test");
 
     TetLoop::computeQuality(queue, mesh);
@@ -108,6 +109,7 @@ bool Tests::t_custom_EdgeRemoval(std::string _filename)
     }
 
     std::cout << "Quality: "<< qualityBefore << " -> " << qualityAfter << std::endl;
+    std::cout << "\t-Delta: "<< qualityDelta << std::endl;
     if(qualityAfter <= qualityBefore){
         std::cout << "\033[1;31m X Quality should improve after operation!\n\033[0m" << std::endl;
         return false;
@@ -140,9 +142,10 @@ bool Tests::t_StressEdgeRemoval(){
     TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(5, mesh);
 
     TetLoop loop(mesh, 0.4, cv);
+    double delta = 0.;
     for(auto e: mesh.edges()){
         if(!mesh.is_boundary(e)){
-            auto result = loop.edgeRemoval(e, false);
+            auto result = loop.edgeRemoval(e, delta, false);
             reverts = result ? reverts : reverts + 1;
         }
         if(iters++ % 20 == 0){
@@ -164,6 +167,7 @@ bool Tests::t_FaceRemoval(){
     int cellNb = 0;
     double qualityBefore = 0;
     double qualityAfter = 0;
+    double qualityDelta  = 0;
     std::map<int,int> cv = {{0,0}};
 
     auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  -10,  0));
@@ -182,10 +186,8 @@ bool Tests::t_FaceRemoval(){
 
     TetLoop loop(mesh, 0.4, cv);
     auto begin = std::chrono::high_resolution_clock::now();
-    loop.faceRemoval(FaceHandle(0), true);
+    loop.faceRemoval(FaceHandle(0), qualityDelta, false);
     TetLoop::displayIterationTime(begin, "Face removal test");
-
-
 
     TetLoop::computeQuality(queue, mesh);
     qualityAfter = queue.top().quality_;
@@ -217,6 +219,7 @@ bool Tests::t_StressFaceRemoval(){
     std::map<int,int> cv = {{0,0}};
     int reverts = 0;
     int iters = 0;
+    double qualityDelta  = 0;
     TetLoop::PriorityQueue queue;
     TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(5, mesh);
 
@@ -225,7 +228,7 @@ bool Tests::t_StressFaceRemoval(){
     for(int i = 0; i < max; ++i){
         auto f = FaceHandle(i);
         if(!mesh.is_deleted(f)){
-            auto result = loop.faceRemoval(f, false);
+            auto result = loop.faceRemoval(f, qualityDelta, false);
             reverts = result ? reverts : reverts + 1;
         }
         if(iters++ % 50 == 0){
@@ -254,6 +257,7 @@ bool Tests::t_flip23(){
     int cellNb = 0;
     double qualityBefore = 0;
     double qualityAfter = 0;
+    double qualityDelta  = 0;
     std::map<int,int> cv = {{0,0}};
 
     auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  -10,  0));
@@ -407,6 +411,85 @@ bool Tests::t_multiface(){
     mesh.add_cell(v1,v2,v3,v0, true);
     mesh.add_cell(v1,v3,v2,v4, true);
 
+//    double quality = QualityEvaluation::evaluate(v0, v4, v3, v2, mesh);
+//    std::cout << "Quality: "<< quality << std::endl;
+//    quality = QualityEvaluation::evaluate(v0, v4, v1, v3, mesh);
+//    std::cout << "Quality: "<< quality << std::endl;
+//    quality = QualityEvaluation::evaluate(v0, v4, v2, v1, mesh);
+//    std::cout << "Quality: "<< quality << std::endl;
+
+    TetLoop::computeQuality(queue, mesh);
+    qualityBefore = queue.top().quality_;
+    TetLoop::reset_queue(queue);
+
+    for(auto fh: mesh.faces()){
+        if(!mesh.is_boundary(fh)){
+            std::cout << "Face to remove: "<< fh << std::endl;
+            toRemove = fh;
+            break;
+        }
+    }
+
+    std::vector<CellHandle> added;
+    TetLoop loop(mesh, 0.4, cv);
+    auto begin = std::chrono::high_resolution_clock::now();
+    loop.multiFace(mesh, toRemove, added);
+    TetLoop::displayIterationTime(begin, "Multiface flip test");
+
+
+    TetLoop::computeQuality(queue, mesh);
+    qualityAfter = queue.top().quality_;
+
+    for(auto ch: mesh.cells()){
+        cellNb++;
+    }
+
+    std::cout << "Quality: "<< qualityBefore << " -> " << qualityAfter << std::endl;
+    if(qualityAfter <= qualityBefore){
+        std::cout << "\033[1;31m X Quality should improve after operation! Quality: "
+                  << qualityBefore<< " -> "<< qualityAfter <<"\n\033[0m" << std::endl;
+        return false;
+    }
+    if(cellNb != 3){
+        std::cout << "\033[1;31m X Only 3 cells should remain! Cell number:"<< cellNb
+                  << "\n\033[0m" << std::endl;
+        return false;
+    }
+
+    std::cout << "Added cells: "<< TetLoop::vectorToString<CellHandle>(added) << std::endl;
+    if(added.size() != 3){
+        std::cout << "\033[1;31m X Only 3 cells should be added ! added: "<< added.size()
+                  <<"\n\033[0m" << std::endl;
+        return false;
+    }
+
+    std::cout << "\033[1;32mPassed\033[0m\n"
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
+    return true;
+}
+
+bool Tests::t_custom_multiface(std::string _filename){
+    std::cout << "\033[1;35m------------------------------"
+                 "\nMultiface removal test\n\033[0m"<< std::endl;
+    TetrahedralMesh mesh;
+
+    OpenVolumeMesh::IO::FileManager fileManager;
+    fileManager.readFile(LOGS_MESH + _filename, mesh);
+
+    TetLoop::PriorityQueue queue;
+    FaceHandle toRemove(-1);
+    int cellNb = 0;
+    double qualityBefore = 0;
+    double qualityAfter = 0;
+    std::map<int,int> cv = {{0,0}};
+
+//    double quality = QualityEvaluation::evaluate(v0, v4, v3, v2, mesh);
+//    std::cout << "Quality: "<< quality << std::endl;
+//    quality = QualityEvaluation::evaluate(v0, v4, v1, v3, mesh);
+//    std::cout << "Quality: "<< quality << std::endl;
+//    quality = QualityEvaluation::evaluate(v0, v4, v2, v1, mesh);
+//    std::cout << "Quality: "<< quality << std::endl;
+
     TetLoop::computeQuality(queue, mesh);
     qualityBefore = queue.top().quality_;
     TetLoop::reset_queue(queue);
@@ -482,8 +565,9 @@ bool Tests::t_EdgeContraction(){
     TetLoop::computeQuality(queue, mesh);
 
     TetLoop loop(mesh, 0.4, cv);
+    double delta = 0;
     std::cout << "Tets before: " << mesh.n_logical_cells() << std::endl;
-    loop.contractEdge(edgeToRemove, tetsAltered);
+    loop.contractEdge(edgeToRemove, tetsAltered, delta);
     std::cout << "Tets altered" << std::endl;
     for(auto t: tetsAltered){
         std::cout << t << ", ";
@@ -638,22 +722,77 @@ bool Tests::t_quality_evaluation(){
     return true;
 }
 
+bool Tests::t_speed(){
+    std::cout << "\033[1;35m------------------------------"
+                 "\nSpeed test\n\033[0m"<< std::endl;
+    auto begin = std::chrono::high_resolution_clock::now();
+    TetrahedralMesh mesh;
+    auto mesh_begin = std::chrono::high_resolution_clock::now();
+    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::
+            generate_mesh(10, 10,15 , mesh);
+    TetLoop::displayIterationTime(mesh_begin, "10x10x15 Mesh generation");
+
+    TetrahedralMesh temp;
+    auto copy_begin = std::chrono::high_resolution_clock::now();
+    temp = mesh;
+    TetLoop::displayIterationTime(copy_begin, "Mesh copy");
+
+    TetLoop::PriorityQueue queue;
+    auto quality_begin = std::chrono::high_resolution_clock::now();
+    TetLoop::computeQuality(queue, mesh);
+    TetLoop::displayIterationTime(quality_begin, "Whole mesh quality evaluation");
+
+    TetLoop::reset_queue(queue);
+    std::set<CellHandle> cellSet({CellHandle(0), CellHandle(10), CellHandle(105),
+                                  CellHandle(666), CellHandle(354), CellHandle(21),
+                                  CellHandle(78), CellHandle(922), CellHandle(545),
+                                  CellHandle(123), CellHandle(330), CellHandle(677)});
+    auto quality_set_begin = std::chrono::high_resolution_clock::now();
+    for(auto ch: cellSet){
+        // minus to handle the change of quality to dirichlet
+        double quality = QualityEvaluation::evaluate(ch, mesh);
+        queue.push(TetLoop::Tet(ch, quality));
+    }
+    TetLoop::displayIterationTime(quality_set_begin, "Small Set quality evaluation");
+
+    TetLoop::reset_queue(queue);
+    std::set<CellHandle> bigCellSet;
+    for(int i = 0; i < 1500; ++i){
+        bigCellSet.insert(CellHandle(i));
+    }
+    quality_set_begin = std::chrono::high_resolution_clock::now();
+    for(auto ch: bigCellSet){
+        // minus to handle the change of quality to dirichlet
+        double quality = QualityEvaluation::evaluate(ch, mesh);
+        queue.push(TetLoop::Tet(ch, quality));
+    }
+    TetLoop::displayIterationTime(quality_set_begin, "Big Set quality evaluation");
+
+    TetLoop::displayIterationTime(begin, "Complete test");
+    std::cout << "\033[1;32mDone\033[0m\n"
+                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
+
+    return true;
+}
+
 bool Tests::runAll(){
     std::cout << "\033[1;35mRun all tests\n" << std::endl;
     bool passed(false), edge(false), multiface(false),
-            flip23(false), flip32(false),cheby(false);
+            flip23(false), flip32(false),cheby(false),speed(false);
 
     edge        = t_EdgeRemoval();
     multiface   = t_multiface();
     flip23      = t_flip23();
     flip32      = t_flip32();
     cheby       = t_chebyshev_centroid();
+    speed       = t_speed();
     passed =
-            edge &&
-            multiface &&
-            cheby &&
-            flip32 &&
-            flip23
+            edge        &&
+            multiface   &&
+            cheby       &&
+            flip32      &&
+            flip23      &&
+            speed
             ;
     return passed;
 }

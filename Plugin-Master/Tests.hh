@@ -21,7 +21,9 @@ public:
     static bool t_custom_EdgeRemoval(std::string _filename);
     static bool t_flip32();
     static bool t_multiface();
+    static bool t_custom_multiface(std::string _filename="dump_multiface.ovm");
     static bool t_quality_evaluation();
+    static bool t_speed();
 private:
     Tests();
     inline static const std::string LOGS_MESH = "../../../../Plugin-Master/logs/meshes/";

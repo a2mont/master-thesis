@@ -22,6 +22,7 @@ public:
             OpenVolumeMesh::VertexHandle _p3,
             TetrahedralMesh &_mesh,
             const bool _verbose = false);
+    static void scaleMesh(TetrahedralMesh &_mesh);
     // 2D
     static double evaluate(const OpenMesh::SmartFaceHandle _face, TriMesh& _mesh, const bool _verbose = false);
     // 2d & 3D

@@ -19,6 +19,7 @@ void MasterPlugin::initializePlugin()
     connect(tool_->clearButton, SIGNAL(clicked()), this, SLOT(slot_clear_constraints()));
     connect(tool_->beginExpButton, SIGNAL(clicked()), this, SLOT(slot_start_experiment()));
     connect(tool_->nextButton, SIGNAL(clicked()), this, SLOT(slot_experiment_loop()));
+    connect(tool_->completeButton, SIGNAL(clicked()), this, SLOT(slot_complete_experiment()));
 
 
     // Add the Toolbox
@@ -29,18 +30,15 @@ void MasterPlugin::pluginsInitialized(){
     // Arbitrary id for constraint vertex
     constraint_vhs_[0] = 0;
     slot_generate_base_mesh();
-//    for(int i = 0; i < 2; ++i){
-//        std::string name = "mesh_dump" + std::to_string(i) + "_3D.ovm";
-//        Tests::t_custom_chebyshev_centroid(name);
+//    Tests::runAll();
+//    std::cout << "Volume------------------" << std::endl;
+//    for(auto ch: tetmesh_.cells()){
+//        double vol = QualityEvaluation::calculate_volume(tetmesh_,ch);
+//        if(vol < 1e-5){
+//            std::cout << "text: "<< vol << std::endl;
+//        }
 //    }
-    Tests::runAll();
-//    tool_->beginExpButton->click();
-//    for(int i = 0; i < 5; ++i){
-//        tool_->nextButton->click();
-//    }
-//    worldMesh_ = gen_world_mesh();
-//    slot_show_quality();
-//    slot_show_constraint_vertex();
+
     emit addPickMode("Pick Constraint");
 
 }
@@ -118,6 +116,15 @@ void MasterPlugin::slot_clear_constraints(){
     constraint_vhs_.clear();
     std::cout << "Constraint vertices cleared" << std::endl;
     slot_show_constraint_vertex();
+}
+
+void MasterPlugin::slot_complete_experiment(){
+    int remain = timesteps_ - t_;
+    std::cout << "Remaining timesteps: "<< remain << std::endl;
+    for(remain; remain > 0; --remain){
+        tool_->nextButton->click();
+    }
+
 }
 void MasterPlugin::slot_show_quality(){
     for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
@@ -269,8 +276,10 @@ void MasterPlugin::slot_start_experiment(){
     t_ = 0;
     timesteps_ = tool_->timestepsSpinBox->value();
     q_min_ = tool_->qualitySpinBox->value();
+    bool useWorld = tool_->worldSpaceCheck->isChecked();
 
     tool_->nextButton->setEnabled(true);
+    tool_->completeButton->setEnabled(true);
     tool_->beginExpButton->setEnabled(false);
     tool_->experiment_tabs->setEnabled(false);
     tool_->timestepsSpinBox->setEnabled(false);
@@ -304,10 +313,8 @@ void MasterPlugin::slot_start_experiment(){
 
         tet_obj->materialNode()->set_point_size(3.0);
 
-        experiment3D_ = new Experiment3D(tetmesh_, -q_min_, constraint_vhs_);
+        experiment3D_ = new Experiment3D(tetmesh_, -q_min_, constraint_vhs_, useWorld);
         std::cout << "Selected experiment: " << tool_->experiment3D->currentText().toStdString() << std::endl;
-
-        slot_experiment_loop();
     }
 }
 
@@ -349,6 +356,7 @@ void MasterPlugin::slot_experiment_loop(){
         if(t_ >= timesteps_){
             std::cout << "Experiment ended" << std::endl;
             tool_->nextButton->setEnabled(false);
+            tool_->completeButton->setEnabled(false);
             tool_->beginExpButton->setEnabled(true);
             tool_->experiment_tabs->setEnabled(true);
             tool_->timestepsSpinBox->setEnabled(true);

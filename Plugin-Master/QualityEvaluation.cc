@@ -8,7 +8,7 @@ double QualityEvaluation::symmetric_dirichlet_energy(const TetrahedralMesh& mesh
     Eigen::MatrixXd P(3,4);
 
     if(_c_verts.size() != 4){
-        std::cout << "\033[1;31mAssertion failed, too many vertices: \033[0m"<< _c_verts.size() << std::endl;
+        std::cout << "\033[1;31mAssertion failed, vertices number incorrect: \033[0m"<< _c_verts.size() << std::endl;
         return std::numeric_limits<double>::infinity();
     }
 
@@ -25,10 +25,10 @@ double QualityEvaluation::symmetric_dirichlet_energy(const TetrahedralMesh& mesh
 
     //std::cout<<" - E: "<<std::endl<<E<<std::endl;
 
-    std::vector<ACG::Vec3d> p = {{std::sqrt(8.)/3.,  0,  0.0},
-                                 {-std::sqrt(2.)/3., std::sqrt(2./3.), 0.0},
-                                 {-std::sqrt(2.)/3., -std::sqrt(2./3.), 0.0},
-                                 {0,0,1.0+1.0/3.0}};
+    std::vector<ACG::Vec3d> p = {{ std::sqrt(8.)/3.,                 0,          0.0},
+                                 {-std::sqrt(2.)/3.,  std::sqrt(2./3.),          0.0},
+                                 {-std::sqrt(2.)/3., -std::sqrt(2./3.),          0.0},
+                                 {              0,                   0, 1.0+1.0/3.0}};
 
     Eigen::Matrix<double, 3, 4> P_ref;
     P_ref<<p[0][0],p[1][0],p[2][0],p[3][0],
@@ -52,11 +52,12 @@ double QualityEvaluation::symmetric_dirichlet_energy(const TetrahedralMesh& mesh
 }
 
 
-double QualityEvaluation::evaluate(const OpenVolumeMesh::CellHandle _cell,
+double QualityEvaluation::evaluate(OpenVolumeMesh::CellHandle _cell,
                                    TetrahedralMesh& _mesh,
                                    const bool _verbose){
-    double quality = 0.;
+    double quality = -std::numeric_limits<double>::infinity();
 
+    if(_mesh.is_deleted(_cell)) return quality;
     std::vector<OpenVolumeMesh::VertexHandle> vertices;
 
     for(auto vh: _mesh.get_cell_vertices(_cell)){

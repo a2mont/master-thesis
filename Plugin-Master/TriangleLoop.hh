@@ -38,8 +38,8 @@ public:
         if(_logs){
             logsAddress_ = LOGS_BASE + std::to_string(q_min_).substr(0,4) + LOGS_EXTENSION;
             std::string logsTimesteps = LOGS_STEP + std::to_string(q_min_).substr(0,4) + LOGS_EXTENSION;
-            logger_= new Logger(logsAddress_, q_min_);
-            timeStepLogger_ = new Logger(logsTimesteps, q_min_);
+//            logger_= new Logger(logsAddress_, q_min_);
+//            timeStepLogger_ = new Logger(logsTimesteps, q_min_);
         }
 
     }

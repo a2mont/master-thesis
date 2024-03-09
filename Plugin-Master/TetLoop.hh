@@ -28,8 +28,52 @@ public:
     {
         if(_logs){
             logsAddress_ = LOGS_BASE + std::to_string(q_min_).substr(0,6) + LOGS_EXTENSION;
-            logger_= new Logger(logsAddress_, q_min_);
+            logger_= new Logger(logsAddress_, q_min_, stats_.names_list());
+            computeQuality();
+            addToStats(Stats::INIT, quality_queue_.top().quality_);
+            double avgQuality(0.);
+            while(!quality_queue_.empty()){
+                Tet top = quality_queue_.top();
+                quality_queue_.pop();
+                avgQuality += top.quality_;
+            }
+            avgQuality /= mesh_.n_logical_cells();
+            addToStats(Stats::INIT_AVG, avgQuality);
+
         }
+    }
+    TetLoop(TetrahedralMesh& _mesh,
+            double _q_min,
+            std::map<int,int>& _constraint_vhs,
+            const bool _useWorldSpace,
+            const bool _logs = false) :
+        mesh_(_mesh),
+        world_mesh_(_mesh),
+        cavityEdge_(mesh_.request_halfface_property<bool>("Cavity Edge")),
+        cavityEdge_wm_(world_mesh_.request_halfface_property<bool>("Cavity Edge")),
+        constraint_vhs_(_constraint_vhs),
+        includeLogs_(_logs),
+        q_min_(_q_min),
+        useWorldSpace_(_useWorldSpace)
+    {
+        if(_logs){
+            logsAddress_ = LOGS_BASE + std::to_string(q_min_).substr(0,6) + LOGS_EXTENSION;
+            logger_= new Logger(logsAddress_, q_min_, stats_.names_list());
+        }
+        // record initial mesh quality to stats
+        computeQuality();
+        addToStats(Stats::INIT, quality_queue_.top().quality_);
+        double avgQuality(0.);
+        while(!quality_queue_.empty()){
+            Tet top = quality_queue_.top();
+            quality_queue_.pop();
+            avgQuality += top.quality_;
+        }
+        avgQuality /= mesh_.n_logical_cells();
+        addToStats(Stats::INIT_AVG, avgQuality);
+        std::cout << "Starting tet loop with parameters:\n\t-Q min: "<<
+                     q_min_ << " -World space: "<< useWorldSpace_ << " -Use logs: "<< includeLogs_
+                  << std::endl;
 
     }
     ~TetLoop(){}
@@ -73,19 +117,79 @@ public:
     };
 
     struct Stats{
-        enum StatType {TIMESTEP, TOPOLOGY, CONTRACTION, INSERTION, SMOOTHING};
-        std::vector<double> timestep_quality_;
-        std::vector<double> topo_quality_delta_;
-        std::vector<double> contra_quality_delta_;
-        std::vector<double> insert_quality_delta_;
-        std::vector<double> smooth_quality_delta_;
+        enum StatType {
+            INIT,
+            INIT_AVG,
+            BEFORE,
+            BEFORE_AVG,
+            AFTER,
+            AFTER_AVG,
+            TOPOLOGY,
+            TOPOLOGY_REJECT,
+            CONTRACTION,
+            CONTRACTION_REJECT,
+            INSERTION,
+            INSERTION_REJECT,
+            SMOOTHING,
+            SMOOTHING_REJECT,
+            LAST /* used to get number of entries (HAS to be last !)*/};
+        std::map<StatType, const char*> types_titles{
+            {INIT, "Initial mesh quality"},
+            {INIT_AVG, "Initial average mesh quality"},
+            {BEFORE, "Quality before remeshing"},
+            {BEFORE_AVG, "Average quality before remeshing"},
+            {AFTER, "Quality after remeshing"},
+            {AFTER_AVG, "Average quality after remeshing"},
+            {TOPOLOGY, "Quality improvements for topological pass"},
+            {TOPOLOGY_REJECT, "Quality decrease rejected for topological pass"},
+            {CONTRACTION, "Quality improvements for contraction pass"},
+            {CONTRACTION_REJECT, "Quality decrease rejected for contraction pass"},
+            {INSERTION, "Quality improvements for insertion pass"},
+            {INSERTION_REJECT, "Quality decrease rejected for insertion pass"},
+            {SMOOTHING, "Quality improvements for smoothing pass"},
+            {SMOOTHING_REJECT, "Quality decrease rejected for smoothing pass"},
+            {LAST, "Used for enumeration, do NOT fill"}
+        };
+        std::map<StatType, const char*> types_names{
+            {INIT, "Initial"},
+            {INIT_AVG, "Initial_avg"},
+            {BEFORE, "Before"},
+            {BEFORE_AVG, "Before_avg"},
+            {AFTER, "After"},
+            {AFTER_AVG, "After_avg"},
+            {TOPOLOGY, "Topological"},
+            {TOPOLOGY_REJECT, "Topological_reject"},
+            {CONTRACTION, "Contraction"},
+            {CONTRACTION_REJECT, "Contraction_reject"},
+            {INSERTION, "Insertion"},
+            {INSERTION_REJECT, "Insertion_reject"},
+            {SMOOTHING, "Smoothing"},
+            {SMOOTHING_REJECT, "Smoothing_reject"},
+            {LAST, "Ignore"}
+        };
+        std::map<StatType, std::vector<double>> stat_data_;
 
+
+
+        Stats(){
+            for(StatType i = INIT; i != LAST; i = StatType(i+1)){
+                StatType type = static_cast<StatType>(i);
+                stat_data_[type] = std::vector<double>();
+            }
+        }
+        std::vector<std::string> names_list(){
+            std::vector<std::string> names;
+            for(auto kv: types_names){
+                names.push_back(kv.second);
+            }
+            return names;
+        }
         void flush(){
-            timestep_quality_.clear();
-            topo_quality_delta_.clear();
-            contra_quality_delta_.clear();
-            insert_quality_delta_.clear();
-            smooth_quality_delta_.clear();
+            // empty content
+            for(auto& kv_pair: stat_data_){
+                if(kv_pair.first == INIT || kv_pair.first == INIT_AVG) continue;
+                kv_pair.second.clear();
+            }
         }
 
     };
@@ -118,17 +222,26 @@ public:
     bool edgeRemoval(EdgeHandle _eh,
                      std::vector<CellHandle>& _cellsAdded,
                      double& _qualityDelta,
+                     double& _rejectedTotal,
                      bool _verbose = true);
-    bool edgeRemoval(EdgeHandle _eh, double& _qualityDelta, bool _verbose = true);
+    bool edgeRemoval(EdgeHandle _eh,
+                     double& _qualityDelta,
+                     double& _rejectedTotal,
+                     bool _verbose = true);
     bool faceRemoval(FaceHandle _fh,
                      std::vector<CellHandle>& _cellsAdded,
                      std::vector<int>& _counter,
                      double& _qualityDelta,
+                     double& _rejectedTotal,
                      bool _verbose = true);
-    bool faceRemoval(FaceHandle _fh, double& _qualityDelta, bool _verbose = true);
+    bool faceRemoval(FaceHandle _fh,
+                     double& _qualityDelta,
+                     double& _rejectedTotal,
+                     bool _verbose = true);
     VertexHandle contractEdge(EdgeHandle _eh,
                               std::vector<CellHandle>& _tetsAltered,
-                              double& _qualityDelta);
+                              double& _qualityDelta,
+                              double& _rejectTotal);
     bool find_chebyshev_center(const TetrahedralMesh &_mesh,
                                const std::set<HalfFaceHandle> &constraint_hfs,
                                const double radius_lower_bound,
@@ -161,10 +274,11 @@ public:
     static void cleanMesh(TetrahedralMesh& _mesh, bool _keepBoundary = false);
     static void cleanQualityQueue(PriorityQueue& _queue, TetrahedralMesh& _mesh);
     static void displayIterationTime(std::chrono::system_clock::time_point& _begin, std::string _name);
-    static void logStats(Stats _stats, Logger& _logger);
+    static void logStats(Stats& _stats, Logger& _logger);
 private:
 
-    bool topological_pass(PriorityQueue& _A, double& _qualityDelta);
+    void subdivision_pass(PriorityQueue &_A, double &_qualityDelta);
+    bool topological_pass(PriorityQueue& _A, double& _qualityDelta, double& _rejectedTotal);
     void edge_contraction_pass(PriorityQueue& _A, double& _qualityDelta);
     void insertion_pass(PriorityQueue& _A, double& _qualityDelta);
     void smoothing_pass(PriorityQueue& _A, double& _qualityDelta, int _iterations = 1);
@@ -211,6 +325,8 @@ private:
     double computeQualityDelta(double _before);
     void addToStats(Stats::StatType _statName, double _quality);
     void saveMesh(TetrahedralMesh &_mesh, std::set<CellHandle> &_cellsToKeep, std::string _name);
+    void saveMesh(TetrahedralMesh &_mesh, std::string _name);
+    void compute_volumes_and_min_heights(TetrahedralMesh &mesh, double &min_height, double &min_vol);
 
 private:
     TetrahedralMesh& mesh_;

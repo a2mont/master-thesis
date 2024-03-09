@@ -9,10 +9,20 @@
 class Logger
 {
 public:
-    Logger(std::string _filename, const double _q_min): filename_(_filename), q_min_(_q_min) {
+    Logger(std::string _filename,
+           const double _q_min,
+           const std::vector<std::string> _header_names): filename_(_filename), q_min_(_q_min) {
         file_.open(_filename, std::ofstream::out | std::ios::trunc);
         if(file_){
-            file_ << "Quality Min,Quality,Topological,Contraction,Insertion,Smoothing\n";
+            size_t id = 0;
+            file_ << "Quality_min,";
+            for(auto& name: _header_names){
+                file_ << name;
+                if(++id < _header_names.size()){
+                    file_ << ",";
+                }
+            }
+            file_ << "\n";
             file_.close();
         }else
             std::cout << "\033[1;4;33mFailed to open file "<<_filename<<"!!\033[0m" << std::endl;
@@ -26,7 +36,7 @@ public:
     void logQuality(double _quality);
     void nextLine();
     void logAverage();
-    void logLine(std::vector<double> _line, bool _keepFile = false);
+    void logLine(const std::vector<double> _line, const bool _keepFile = false);
     void close();
 private:
     std::fstream file_;

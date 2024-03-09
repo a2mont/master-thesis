@@ -28,12 +28,11 @@ void Smoothing::smooth(TriMesh& _mesh, OpenMesh::SmartVertexHandle _vh){
 //    _mesh.set_vertex(_vh, pt);
 //}
 using namespace OpenVolumeMesh;
-void Smoothing::smooth(TetrahedralMesh& _mesh, OpenVolumeMesh::VertexHandle _vh){
+void Smoothing::smooth(TetrahedralMesh& _mesh, VertexHandle _vh){
     if(_mesh.is_boundary(_vh))
         return;
     bool printDebug(false);
     ACG::Vec3d pt(0.,0.,0.);
-    unsigned int n_neighbours = 0;
     std::set<HalfFaceHandle> neighbors_opposite_hf;
     for(auto ch: _mesh.vertex_cells(_vh)){
         HalfFaceHandle opposite_hf;
@@ -50,8 +49,9 @@ void Smoothing::smooth(TetrahedralMesh& _mesh, OpenVolumeMesh::VertexHandle _vh)
         }
     }
 
-    // 0.1 MUST match CHEBY_TRESHOLD from TetLoop
-    bool success = find_chebyshev_center(_mesh, neighbors_opposite_hf, 0.01, pt);
+    // treshold MUST match CHEBY_TRESHOLD from TetLoop
+    double treshold = 0.01;
+    bool success = find_chebyshev_center(_mesh, neighbors_opposite_hf, treshold, pt);
     if(success){
         if(printDebug){
             std::cout << "Smoothing vertex from " << _mesh.vertex(_vh) << " to " << pt << std::endl;

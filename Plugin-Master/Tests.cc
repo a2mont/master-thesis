@@ -12,6 +12,7 @@ bool Tests::t_EdgeRemoval()
     double qualityBefore = 0;
     double qualityAfter = 0;
     double qualityDelta  = 0;
+    double rejectedTotal = 0;
     std::map<int,int> cv = {{0,0}};
 
     auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  0,  0));
@@ -34,9 +35,9 @@ bool Tests::t_EdgeRemoval()
     TetLoop::computeQuality(queue, mesh);
     qualityBefore = queue.top().quality_;
 
-    TetLoop loop(mesh, 0.4, cv);
+    TetLoop loop(mesh,0.4, cv, true, false);
     auto begin = std::chrono::high_resolution_clock::now();
-    loop.edgeRemoval(edgeToRemove, added, qualityDelta, true);
+    loop.edgeRemoval(edgeToRemove, added, qualityDelta, rejectedTotal, true);
     TetLoop::displayIterationTime(begin, "Edge removal test");
 
 
@@ -81,6 +82,7 @@ bool Tests::t_custom_EdgeRemoval(std::string _filename)
     double qualityBefore = 0;
     double qualityAfter  = 0;
     double qualityDelta  = 0;
+    double rejectedTotal = 0;
     std::map<int,int> cv = {{0,0}};
 
     OpenVolumeMesh::IO::FileManager fileManager;
@@ -96,9 +98,9 @@ bool Tests::t_custom_EdgeRemoval(std::string _filename)
     TetLoop::computeQuality(queue, mesh);
     qualityBefore = queue.top().quality_;
 
-    TetLoop loop(mesh, 0.4, cv);
+    TetLoop loop(mesh, 0.4, cv, true, false);
     auto begin = std::chrono::high_resolution_clock::now();
-    loop.edgeRemoval(edgeToRemove, added, qualityDelta, true);
+    loop.edgeRemoval(edgeToRemove, added, qualityDelta, rejectedTotal, true);
     TetLoop::displayIterationTime(begin, "Edge removal test");
 
     TetLoop::computeQuality(queue, mesh);
@@ -131,34 +133,6 @@ bool Tests::t_custom_EdgeRemoval(std::string _filename)
     return true;
 }
 
-bool Tests::t_StressEdgeRemoval(){
-    std::cout << "\033[1;35m------------------------------"
-                 "\nEdge removal stress test\n\033[0m" << std::endl;
-
-    TetrahedralMesh mesh;
-    std::map<int,int> cv = {{0,0}};
-    int reverts = 0;
-    int iters = 0;
-    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(5, mesh);
-
-    TetLoop loop(mesh, 0.4, cv);
-    double delta = 0.;
-    for(auto e: mesh.edges()){
-        if(!mesh.is_boundary(e)){
-            auto result = loop.edgeRemoval(e, delta, false);
-            reverts = result ? reverts : reverts + 1;
-        }
-        if(iters++ % 20 == 0){
-            std::cout << "Iter " << iters << "/" << mesh.n_logical_edges() << std::endl;
-        }
-    }
-    std::cout << "# Reverts: " << reverts << "/" << iters << std::endl;
-    std::cout << "\033[1;32mPassed\033[0m\n"
-                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
-
-    return true;
-}
-
 bool Tests::t_FaceRemoval(){
     std::cout << "\033[1;35m------------------------------"
                  "\nFace removal test\n\033[0m"<< std::endl;
@@ -168,6 +142,7 @@ bool Tests::t_FaceRemoval(){
     double qualityBefore = 0;
     double qualityAfter = 0;
     double qualityDelta  = 0;
+    double rejectedTotal = 0;
     std::map<int,int> cv = {{0,0}};
 
     auto v0 = mesh.add_vertex(ACG::Vec3d( 0,  -10,  0));
@@ -184,9 +159,9 @@ bool Tests::t_FaceRemoval(){
     qualityBefore = queue.top().quality_;
     TetLoop::reset_queue(queue);
 
-    TetLoop loop(mesh, 0.4, cv);
+    TetLoop loop(mesh, 0.4, cv, true, false);
     auto begin = std::chrono::high_resolution_clock::now();
-    loop.faceRemoval(FaceHandle(0), qualityDelta, false);
+    loop.faceRemoval(FaceHandle(0), qualityDelta, rejectedTotal, false);
     TetLoop::displayIterationTime(begin, "Face removal test");
 
     TetLoop::computeQuality(queue, mesh);
@@ -208,43 +183,6 @@ bool Tests::t_FaceRemoval(){
 
     std::cout << "\033[1;32mPassed\033[0m\n"
                  "\033[1;35m------------------------------\n\033[0m" << std::endl;
-    return true;
-}
-
-bool Tests::t_StressFaceRemoval(){
-    std::cout << "\033[1;35m------------------------------"
-                 "\nEdge removal stress test\n\033[0m" << std::endl;
-
-    TetrahedralMesh mesh;
-    std::map<int,int> cv = {{0,0}};
-    int reverts = 0;
-    int iters = 0;
-    double qualityDelta  = 0;
-    TetLoop::PriorityQueue queue;
-    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(5, mesh);
-
-    TetLoop loop(mesh, 0.4, cv);
-    int max = mesh.n_logical_faces();
-    for(int i = 0; i < max; ++i){
-        auto f = FaceHandle(i);
-        if(!mesh.is_deleted(f)){
-            auto result = loop.faceRemoval(f, qualityDelta, false);
-            reverts = result ? reverts : reverts + 1;
-        }
-        if(iters++ % 50 == 0){
-            std::cout << "Iter " << iters << "/" << max << std::endl;
-        }
-    }
-
-    TetLoop::computeQuality(queue, mesh);
-    if(queue.top().quality_ <= 10e-5){
-        std::cout << "\033[1;31m X creates inverted tets!\n\033[0m" << std::endl;
-        return false;
-    }
-    std::cout << "# Reverts: " << reverts << "/" << iters << std::endl;
-    std::cout << "\033[1;32mPassed\033[0m\n"
-                 "\033[1;35m------------------------------\n\033[0m" << std::endl;
-
     return true;
 }
 
@@ -283,7 +221,7 @@ bool Tests::t_flip23(){
     }
 
     std::vector<CellHandle> added;
-    TetLoop loop(mesh, 0.4, cv);
+    TetLoop loop(mesh, 0.4, cv, true, false);
     auto begin = std::chrono::high_resolution_clock::now();
     loop.flip23(mesh, toRemove, added);
     TetLoop::displayIterationTime(begin, "2-3 flip test");
@@ -352,7 +290,7 @@ bool Tests::t_flip32(){
     qualityBefore = queue.top().quality_;
     TetLoop::reset_queue(queue);
 
-    TetLoop loop(mesh, 0.4, cv);
+    TetLoop loop(mesh, 0.4, cv, true, false);
     auto begin = std::chrono::high_resolution_clock::now();
     loop.flip32(mesh,edgeToRemove, added);
     TetLoop::displayIterationTime(begin, "3-2 flip test");
@@ -431,7 +369,7 @@ bool Tests::t_multiface(){
     }
 
     std::vector<CellHandle> added;
-    TetLoop loop(mesh, 0.4, cv);
+    TetLoop loop(mesh, 0.4, cv, true, false);
     auto begin = std::chrono::high_resolution_clock::now();
     loop.multiFace(mesh, toRemove, added);
     TetLoop::displayIterationTime(begin, "Multiface flip test");
@@ -567,7 +505,7 @@ bool Tests::t_EdgeContraction(){
     TetLoop loop(mesh, 0.4, cv);
     double delta = 0;
     std::cout << "Tets before: " << mesh.n_logical_cells() << std::endl;
-    loop.contractEdge(edgeToRemove, tetsAltered, delta);
+    loop.contractEdge(edgeToRemove, tetsAltered, delta, delta);
     std::cout << "Tets altered" << std::endl;
     for(auto t: tetsAltered){
         std::cout << t << ", ";
@@ -700,7 +638,7 @@ bool Tests::t_quality_evaluation(){
     TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::
             generate_mesh(3,3,3,mesh);
     std::map<int,int> cst;
-    Experiment3D exp(mesh, 0.1, cst);
+    Experiment3D exp(mesh, 0.1, cst, false);
     exp.generate_torsion_mesh(1.5/15 *5, false);
 
     TetLoop::computeQuality(queue,mesh);
@@ -781,9 +719,9 @@ bool Tests::runAll(){
             flip23(false), flip32(false),cheby(false),speed(false);
 
     edge        = t_EdgeRemoval();
-    multiface   = t_multiface();
     flip23      = t_flip23();
     flip32      = t_flip32();
+    multiface   = t_multiface();
     cheby       = t_chebyshev_centroid();
     speed       = t_speed();
     passed =
@@ -797,4 +735,45 @@ bool Tests::runAll(){
     return passed;
 }
 
+
+void Tests::errorReproduction(){
+    TetrahedralMesh baseMesh;
+    auto v0 = baseMesh.add_vertex(ACG::Vec3d( 0,  0,  0));
+    auto v1 = baseMesh.add_vertex(ACG::Vec3d(-1,  5,  1));
+    auto v2 = baseMesh.add_vertex(ACG::Vec3d( 0,  5, -1));
+    auto v3 = baseMesh.add_vertex(ACG::Vec3d( 1,  5,  1));
+    auto v4 = baseMesh.add_vertex(ACG::Vec3d( 0, 10,  0));
+
+    baseMesh.add_cell(v0,v1,v3,v4, true);
+    baseMesh.add_cell(v0,v2,v1,v4, true);
+    baseMesh.add_cell(v4,v2,v3,v0, true);
+
+    TetrahedralMesh& mesh = baseMesh;
+    TetrahedralMesh meshCopy = baseMesh;
+    TetrahedralMesh copyOfCopy = meshCopy;
+
+    EdgeHandle toSplit(4);
+    HalfEdgeHandle toCollapse(22);
+
+    std::cout << "---- Should not work ----" << std::endl;
+    copyOfCopy.split_edge(toSplit);
+    copyOfCopy.collapse_edge(toCollapse);
+    for(auto ch: copyOfCopy.cells()){
+        copyOfCopy.get_cell_vertices(ch);
+    }
+
+    std::cout << "---- Should work -----" << std::endl;
+    mesh.split_edge(toSplit);
+    mesh.collapse_edge(toCollapse);
+    for(auto ch: mesh.cells()){
+        mesh.get_cell_vertices(ch);
+    }
+
+
+
+
+
+
+
+}
 

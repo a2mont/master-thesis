@@ -74,15 +74,16 @@ private slots:
     void slot_clear_constraints();
     void slot_start_experiment();
     void slot_experiment_loop();
+    void slot_complete_experiment();
 
 
 public :
 
   ~MasterPlugin() {};
 
-  QString name() { return QString("Master Plugin"); };
+  QString name() override { return QString("Master Plugin"); };
 
-  QString description() { return QString("Plugin used for my thesis !"); };
+  QString description() override { return QString("Plugin used for my thesis !"); };
 
 private:
     typedef OpenMesh::TriMesh_ArrayKernelT<OpenMesh::DefaultTraitsDouble> CustomMesh;

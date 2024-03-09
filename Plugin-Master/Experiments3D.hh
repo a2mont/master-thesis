@@ -8,9 +8,12 @@ class Experiment3D
 {
     using Point = ACG::Vec3d;
 public:
-    Experiment3D(TetrahedralMesh& _mesh, const double _q_min, std::map<int,int>& _constraint_vhs):
+    Experiment3D(TetrahedralMesh& _mesh,
+                 const double _q_min,
+                 std::map<int,int>& _constraint_vhs,
+                 const bool _useWorldSpace):
         mesh_(_mesh),
-        loop_(_mesh, _q_min, _constraint_vhs, true)
+        loop_(_mesh, _q_min, _constraint_vhs, _useWorldSpace, true)
     {}
 private:
     TetrahedralMesh& mesh_;

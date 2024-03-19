@@ -26,138 +26,52 @@ def extract_data(files: list, drop_zeros: bool = False, dimension='3D'):
             first_line = next(reader)
             # check for initialization
             if(datas == None):
-                datas = [[[] for _ in range(len(files))] for _ in range(len(first_line[:-1]))]
+                datas = [[[] for _ in range(len(files))] for _ in range(len(first_line))]
+            last_row = np.zeros(len(first_line))
             for row in reader:
-                if drop_zeros:
-                    [datas[i][file_id].append(float(row[i])) for i in range(len(first_line[:-1])) if row[i] != 'nan' and not is_zero(row[i])]
-                else:
-                    [datas[i][file_id].append(float(row[i])) for i in range(len(first_line[:-1])) if row[i] != 'nan']
+                [datas[i][file_id].append(float(row[i])) if row[i] != 'nan' 
+                 else datas[i][file_id].append(last_row[i]) for i in range(len(first_line)) if i < len(row)-1]
+                last_row = row
         file_id += 1
 
-    return datas, first_line[:-1]
+    return datas, first_line
 
-def treat_data(input: list, tranform_nan: bool):
-    output = []
-    if(tranform_nan):
-        output = [x if x != 'nan' else 0 for x in input]
-    else:
-        output = [x for x in input if x != 'nan']
-    return output
+def inverse_data(data: list):
+    return [-float(x) for x in data]
 
 
-def plot_quality(q_mins: list, qualities: list, baseline: list, title: list = 'Title'):
+def plot_quality(q_mins: list, qualities: list, deltas: dict, deltas_rejected: dict, title: list = 'Title'):
     rows = int(np.ceil(len(q_mins)/2))
     cols = 2 if len(q_mins) > 1 else 1
-    fig, ax = plt.subplots(rows, cols, figsize=(15,15), sharey='all')
-    plt.xticks(np.arange(0, len(baseline), step=1))
-    # fig.tight_layout(pad=3.5)
+    fig, ax = plt.subplots(rows, cols, figsize=(15,15))
     fig.suptitle(title, fontsize=16)
 
     for i,q_min in enumerate(q_mins):
-        if len(qualities[i]) != len(baseline):
-            print(f'Quality {q_min} size does not match baseline size: {len(qualities[i])} vs {len(baseline)}')
-            continue
         x = np.arange(0, len(qualities[i])/2, 0.5)
         y = qualities[i]
-        print(y)
-        print(baseline)
         if rows > 1:
             id_row = int(i / 2)
             id_col = i % cols
-            quality_ax(ax[id_row,id_col], x, y, baseline, q_min)
+            quality_ax(ax[id_row,id_col], x, y, -q_min)
+            twin = ax[id_row,id_col].twinx()
+            plot_deltas(twin, deltas, deltas_rejected)
         elif cols > 1:
-            quality_ax(ax[i], x, y, baseline, q_min)
+            quality_ax(ax[i], x, y, -q_min)
+            twin = ax[i].twinx()
+            plot_deltas(twin, deltas, deltas_rejected)
         else:
-            quality_ax(ax, x, y, baseline, q_min)
+            quality_ax(ax, x, y, -q_min)
+            twin = ax.twinx()
+            plot_deltas(twin, deltas, deltas_rejected)
 
-    plt.show()
 
-def quality_ax(ax: plt.Axes, x, y, baseline ,q_min):
+def quality_ax(ax: plt.Axes, x, y ,q_min):
     step = 0.5
-    ax.plot(x,y, label='With remeshing')
-    ax.plot(x,baseline, label='No remeshing',color='g')
-    for i in np.arange(0, len(baseline)/2, 2*step):
-        ax.axvspan(i, i+step, facecolor='r', alpha=0.2)
-    for i in np.arange(0, len(baseline)/2, 2*step):
-        ax.axvspan(i+step, i+step*2, facecolor='b', alpha=0.2)
+    ax.plot(x,y)
     ax.set_title(f'Quality min={q_min}')
     ax.text(-1.5,q_min + 0.1, f'{q_min}', color='r')
     ax.axhline(y=float(q_min), color='r', alpha=0.5, linestyle='dashed', label='Minimal quality')
     ax.legend()
-
-def plot_deltas(q_mins: list, deltas: dict):
-    for id,q_min in enumerate(q_mins):
-        rows = int(np.ceil(len(deltas)/2))
-        cols = 2
-        fig, ax = plt.subplots(rows, cols, figsize=(15,15), sharey='all', sharex='all')
-        fig.tight_layout(pad=3.5)
-        fig.suptitle(f'Quality min = {q_min}')
-        n_bins = 23
-
-        for i,(title,delta) in enumerate(deltas.items()):
-            data = delta[id]
-            id_row = int(i / 2)
-            id_col = i % cols
-            ax[id_row, id_col].hist(data, ec='darkblue', bins=n_bins)
-            ax[id_row, id_col].set_title(title) 
-
-        plt.show()
-    
-# def plot_grouped_deltas(q_mins: list, deltas: dict):
-#     data_by_quality = {q_min: {title : deltas[title][id] for title in deltas.keys()} for id, q_min in enumerate(q_mins)}
-#     rows = int(np.ceil(len(q_mins)/2))
-#     cols = 2 if len(q_mins) > 1 else 1
-#     fig, ax = plt.subplots(rows, cols, figsize=(15,15), sharey='all', sharex='all')
-#     fig.tight_layout(pad=3.5)
-#     n_bins = 23
-#     for i, q_min in enumerate(q_mins):
-#         datas = data_by_quality[q_min].values()
-#         titles = list(data_by_quality[q_min].keys())
-#         if rows > 1:
-#             id_row = int(i / 2)
-#             id_col = i % cols
-#             ax[id_row, id_col].set_title(f'Quality min={q_min}')
-#             ax[id_row, id_col].hist(datas, bins=n_bins, histtype='step', stacked=True, fill=False, label=titles)
-#             ax[id_row, id_col].legend()
-#         elif cols > 1:
-#             ax[i].set_title(f'Quality min={q_min}')
-#             ax[i].hist(datas, bins=n_bins, histtype='step', stacked=True, fill=False, label=titles)
-#             ax[i].legend()
-#         else:
-#             ax.set_title(f'Quality min={q_min}')
-#             ax.hist(datas, bins=n_bins, histtype='step', stacked=True, fill=False, label=titles)
-#             ax.legend()
-#     plt.show()
-
-def plot_grouped_deltas(q_mins: list, deltas: dict):
-    data_by_quality = {q_min: {title : deltas[title][id] for title in deltas.keys()} for id, q_min in enumerate(q_mins)}
-    rows = int(np.ceil(len(q_mins)/2))
-    cols = 2 if len(q_mins) > 1 else 1
-    fig, ax = plt.subplots(rows, cols, figsize=(15,15), sharey='all', sharex='all')
-    fig.tight_layout(pad=3.5)
-    n_bins = 23
-    for i, q_min in enumerate(q_mins):
-        datas = data_by_quality[q_min].values()
-        print(datas)
-        titles = list(data_by_quality[q_min].keys())
-        if rows > 1:
-            id_row = int(i / 2)
-            id_col = i % cols
-            ax[id_row, id_col].set_title(f'Quality min={q_min}')
-            ax[id_row, id_col].hist(datas, bins=n_bins, histtype='step', stacked=True, fill=False, label=titles)
-            ax[id_row, id_col].legend()
-        elif cols > 1:
-            ax[i].set_title(f'Quality min={q_min}')
-            for data in datas:
-                x = np.arange(len(data))
-                ax[i].bar(x,data, label='AAAA')
-            ax[i].legend()
-        else:
-            ax.set_title(f'Quality min={q_min}')
-            ax.hist(datas, bins=n_bins, histtype='step', stacked=True, fill=False, label=titles)
-            ax.legend()
-    plt.show()
-
 
 def quality_vector(init: float, q_before: list, q_after: list):
     q_list = [init]
@@ -169,18 +83,64 @@ def bar_chart(data, ax: plt.Axes, index = 0, color= '#0000ff'):
     width = 0.25
     offset = width * index
     x = np.arange(len(data))
-    colors = (color, color + '50')
+    colors = color
 
-    copy = np.array([y if y > -1000 else -100000 for y in data])
+    copy = np.array([y if y > -100000 else 100000 for y in data])
 
     mask_norm = copy > -100000
     mask_inf  = copy <= -100000
 
-    ax.bar(x[mask_norm] + offset,copy[mask_norm], width, color = colors[0])
-    ax.bar(x[mask_inf] + offset ,copy[mask_inf], width, color = colors[1])
+    ax.bar(x[mask_norm] + offset,copy[mask_norm], width, color = colors)
+    # ax.bar(x[mask_inf] + offset ,copy[mask_inf], width, color = colors[1])
     ax.set_yscale('symlog')
 
-def main():
+def plot_deltas(ax: plt.Axes, deltas: dict, deltas_rejected: dict):
+    bar_chart(deltas['Topological pass'][0], ax, 0, 'red')
+    bar_chart(deltas['Contraction pass'][0], ax, 1, 'blue')
+    bar_chart(deltas['Insertion pass'][0], ax, 2, 'green')
+    bar_chart(deltas['Smoothing pass'][0], ax, 3, 'orange')
+    bar_chart(deltas_rejected['Topological pass'][0], ax, 0, 'red')
+    bar_chart(deltas_rejected['Contraction pass'][0], ax, 1, 'blue')
+    bar_chart(deltas_rejected['Insertion pass'][0], ax, 2, 'green')
+    bar_chart(deltas_rejected['Smoothing pass'][0], ax, 3, 'orange')
+
+def time_angle_experiment(q_min: float = 40):
+    filename = f"angle180_q_min{q_min}.csv"
+    data,names = extract_data([filename])
+    angles      = [x for x in data[0][0]]
+    times       = [x/1000 for x in data[1][0]]
+    quality     = [x for x in data[2][0]]
+    quality_avg = [x for x in data[3][0]]
+    print(angles,times,quality,quality_avg)
+    fig, ax = plt.subplots(figsize=(10,8))
+    fig.subplots_adjust(right=0.75)
+    fig.suptitle(f'Angle to time with q_min={q_min}')
+    ax.set_xscale('log')
+    ax.set_ylabel('Time (s)')
+
+    quality_color = 'red'
+    average_color='green'
+    base_color = 'blue'
+
+    twin1 = ax.twinx()
+    twin1.tick_params(axis='y', colors=quality_color)
+    twin2 = ax.twinx()
+    twin2.tick_params(axis='y', colors=average_color)
+    twin2.set_ylabel('Deformation energies')
+
+    widths = np.pad(np.diff(angles), (0,1), mode="edge")
+
+    p1 = ax.bar(angles,times, color=base_color, edgecolor=f'dark{base_color}', width=widths, align='edge')
+    p2, = twin1.plot(angles, quality, color=quality_color, label="Worst element")
+    twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Minimal quality')
+    p3, = twin2.plot(angles, quality_avg, color=average_color, label="Mesh average quality")
+    twin2.spines.right.set_position(("axes", 1.2))
+
+    lines,labels = twin1.get_legend_handles_labels()
+    lines2,labels2 = twin2.get_legend_handles_labels()
+    ax.legend(lines+lines2, labels+labels2, loc='upper left')
+
+def quality_experiment():
     filename = "logs_"
     regex = re.compile(f'({filename}.*\.csv$)')
     files = find_files(regex)
@@ -188,18 +148,14 @@ def main():
     pairs = zip(names,data)
     label_data = dict((name,value) for name, value in pairs)
 
-    baseline_data, baseline_names = extract_data(['baseline_20x20_20t.csv'])
-    baseline_pairs = zip(baseline_names,baseline_data)
-    baseline = dict((name,value) for name, value in baseline_pairs)
-
-    baseline_quality = quality_vector(baseline['Initial'][0][0], baseline['Before'][0], baseline['After'][0])
-    baseline_quality_average = quality_vector(baseline['Initial_avg'][0][0], baseline['Before_avg'][0], baseline['After_avg'][0])
-
     # Q min is constant
     label_data['Quality_min'] = [label_data['Quality_min'][i][0]for i in range(len(files))]
 
     q_vectors = [quality_vector(label_data['Initial'][i][0], label_data['Before'][i], label_data['After'][i]) for i in range(len(files))]
     q_vectors_avg = [quality_vector(label_data['Initial_avg'][i][0], label_data['Before_avg'][i], label_data['After_avg'][i]) for i in range(len(files))]
+
+    q_vectors = [inverse_data(vec) for vec in q_vectors]
+    q_vectors_avg = [inverse_data(vec) for vec in q_vectors_avg]
     deltas = {
         "Topological pass": label_data['Topological'],
         "Contraction pass": label_data['Contraction'],
@@ -210,23 +166,83 @@ def main():
         "Contraction pass": label_data['Contraction_reject'],
         "Insertion pass":   label_data['Insertion_reject'],
         "Smoothing pass":   label_data['Smoothing_reject']}
-    plot_quality(label_data['Quality_min'], q_vectors, baseline_quality, "Quality of worse element")
-    plot_quality(label_data['Quality_min'], q_vectors_avg, baseline_quality_average, "Average mesh quality")
-    # plot_deltas(q_mins, deltas)
-    # plot_grouped_deltas(label_data['Quality_min'], deltas)
+    
+    for key,values in deltas.items():
+        i = 0
+        for value in values:
+            deltas[key][i] = [-float(x) if x != 'nan' else 0 for x in value]
+            i += 1
+    for key,values in deltas_rejected.items():
+        i = 0
+        for value in values:
+            deltas_rejected[key][i] = [-float(x) if x != 'nan' else 0 for x in value]
+            i += 1
+    
+    plot_quality(label_data['Quality_min'], q_vectors, deltas, deltas_rejected, "Quality of worse element")
+    plot_quality(label_data['Quality_min'], q_vectors_avg, deltas, deltas_rejected, "Average mesh quality")
 
-    fig, ax = plt.subplots(1, 1, figsize=(12,10))
-    bar_chart(deltas['Topological pass'][0], ax, 0, '#003f5c')
-    bar_chart(deltas['Contraction pass'][0], ax, 1, '#bc5090')
-    bar_chart(deltas['Insertion pass'][0], ax, 2, '#ffa600')
-    bar_chart(deltas['Smoothing pass'][0], ax, 3, '#ffa600')
-    bar_chart(deltas_rejected['Topological pass'][0], ax, 0, '#003f5c')
-    bar_chart(deltas_rejected['Contraction pass'][0], ax, 1, '#bc5090')
-    bar_chart(deltas_rejected['Insertion pass'][0], ax, 2, '#ffa600')
-    bar_chart(deltas_rejected['Smoothing pass'][0], ax, 2, '#ffa600')
+
+
+def main():
+    # time_angle_experiment(40)
+    # time_angle_experiment(35)
+    quality_experiment()
     plt.show()
+    
 
 
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+# def plot_deltas(q_mins: list, deltas: dict):
+#     for id,q_min in enumerate(q_mins):
+#         rows = int(np.ceil(len(deltas)/2))
+#         cols = 2
+#         fig, ax = plt.subplots(rows, cols, figsize=(15,15), sharey='all', sharex='all')
+#         fig.tight_layout(pad=3.5)
+#         fig.suptitle(f'Quality min = {q_min}')
+#         n_bins = 23
+
+#         for i,(title,delta) in enumerate(deltas.items()):
+#             data = delta[id]
+#             id_row = int(i / 2)
+#             id_col = i % cols
+#             ax[id_row, id_col].hist(data, ec='darkblue', bins=n_bins)
+#             ax[id_row, id_col].set_title(title) 
+
+#         plt.show()
+    
+# def plot_grouped_deltas(q_mins: list, deltas: dict):
+#     data_by_quality = {q_min: {title : deltas[title][id] for title in deltas.keys()} for id, q_min in enumerate(q_mins)}
+#     rows = int(np.ceil(len(q_mins)/2))
+#     cols = 2 if len(q_mins) > 1 else 1
+#     fig, ax = plt.subplots(rows, cols, figsize=(15,15), sharey='all', sharex='all')
+#     fig.tight_layout(pad=3.5)
+#     n_bins = 23
+#     for i, q_min in enumerate(q_mins):
+#         datas = data_by_quality[q_min].values()
+#         print(datas)
+#         titles = list(data_by_quality[q_min].keys())
+#         if rows > 1:
+#             id_row = int(i / 2)
+#             id_col = i % cols
+#             ax[id_row, id_col].set_title(f'Quality min={q_min}')
+#             ax[id_row, id_col].hist(datas, bins=n_bins, histtype='step', stacked=True, fill=False, label=titles)
+#             ax[id_row, id_col].legend()
+#         elif cols > 1:
+#             ax[i].set_title(f'Quality min={q_min}')
+#             for data in datas:
+#                 x = np.arange(len(data))
+#                 ax[i].bar(x,data, label='AAAA')
+#             ax[i].legend()
+#         else:
+#             ax.set_title(f'Quality min={q_min}')
+#             ax.hist(datas, bins=n_bins, histtype='step', stacked=True, fill=False, label=titles)
+#             ax.legend()
+#     plt.show()
+

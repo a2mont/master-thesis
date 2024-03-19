@@ -278,6 +278,7 @@ public:
 private:
 
     void subdivision_pass(PriorityQueue &_A, double &_qualityDelta);
+    void collapse_surface_pass(PriorityQueue &_A, double& _qualityDelta);
     bool topological_pass(PriorityQueue& _A, double& _qualityDelta, double& _rejectedTotal);
     void edge_contraction_pass(PriorityQueue& _A, double& _qualityDelta);
     void insertion_pass(PriorityQueue& _A, double& _qualityDelta);

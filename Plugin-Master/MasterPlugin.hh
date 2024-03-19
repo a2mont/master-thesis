@@ -28,6 +28,7 @@
 #include "Experiments3D.hh"
 #include "TetrahedralizedVoxelGridGenerator.hh"
 #include "Tests.hh"
+#include "VertexPriorityQueue.hh"
 
 class MasterPlugin : public QObject, BaseInterface, ToolboxInterface, LoggingInterface, LoadSaveInterface, MouseInterface, PickingInterface
 {

@@ -277,6 +277,7 @@ void MasterPlugin::slot_start_experiment(){
     timesteps_ = tool_->timestepsSpinBox->value();
     q_min_ = tool_->qualitySpinBox->value();
     bool useWorld = tool_->worldSpaceCheck->isChecked();
+    bool autocomplete(true);
 
     tool_->nextButton->setEnabled(true);
     tool_->completeButton->setEnabled(true);
@@ -286,6 +287,10 @@ void MasterPlugin::slot_start_experiment(){
     tool_->qualitySpinBox->setEnabled(false);
     tool_->experiment2D->setEnabled(false);
     tool_->experiment3D->setEnabled(false);
+    tool_->splitCheckBox->setEnabled(false);
+    tool_->splitSpinBox->setEnabled(false);
+    tool_->worldSpaceCheck->setEnabled(false);
+    tool_->angleSpinBox->setEnabled(false);
 
     // -------------------------- 2D --------------------
     for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
@@ -313,8 +318,15 @@ void MasterPlugin::slot_start_experiment(){
 
         tet_obj->materialNode()->set_point_size(3.0);
 
+
+        auto begin = std::chrono::high_resolution_clock::now();
         experiment3D_ = new Experiment3D(tetmesh_, -q_min_, constraint_vhs_, useWorld);
-        std::cout << "Selected experiment: " << tool_->experiment3D->currentText().toStdString() << std::endl;
+        std::cout << "Selected experiment: " <<
+                     tool_->experiment3D->currentText().toStdString() << std::endl;
+        if(autocomplete){
+            slot_complete_experiment();
+            TetLoop::displayIterationTime(begin, "Complete experiment time");
+        }
     }
 }
 
@@ -354,14 +366,18 @@ void MasterPlugin::slot_experiment_loop(){
 
         // reset when done with experiment
         if(t_ >= timesteps_){
-            std::cout << "Experiment ended" << std::endl;
-            tool_->nextButton->setEnabled(false);
-            tool_->completeButton->setEnabled(false);
-            tool_->beginExpButton->setEnabled(true);
-            tool_->experiment_tabs->setEnabled(true);
-            tool_->timestepsSpinBox->setEnabled(true);
-            tool_->experiment2D->setEnabled(true);
-            tool_->experiment3D->setEnabled(true);
+            tool_->nextButton       ->setEnabled(false);
+            tool_->completeButton   ->setEnabled(false);
+            tool_->beginExpButton   ->setEnabled(true);
+            tool_->experiment_tabs  ->setEnabled(true);
+            tool_->timestepsSpinBox ->setEnabled(true);
+            tool_->experiment2D     ->setEnabled(true);
+            tool_->experiment3D     ->setEnabled(true);
+            tool_->splitCheckBox    ->setEnabled(true);
+            tool_->splitSpinBox     ->setEnabled(true);
+            tool_->worldSpaceCheck  ->setEnabled(true);
+            tool_->angleSpinBox     ->setEnabled(true);
+            tool_->qualitySpinBox   ->setEnabled(true);
         }
     }
     // -------------------------- 3D --------------------
@@ -369,7 +385,8 @@ void MasterPlugin::slot_experiment_loop(){
          o_it != PluginFunctions::objectsEnd(); ++o_it) {
         auto *tet_obj = PluginFunctions::tetrahedralMeshObject(*o_it);
         auto *tetmesh = tet_obj->mesh();
-        double nbLoops = 2;
+        double nbLoops = tool_->angleSpinBox->value();
+        std::cout << "\033[1;35mTimestep: "<< t_<< "/"<< timesteps_<< "\033[0m" << std::endl;
         experiment3D_->generate_torsion_mesh(nbLoops/timesteps_);
         ++t_;
 
@@ -380,14 +397,42 @@ void MasterPlugin::slot_experiment_loop(){
 
         // reset when done with experiment
         if(t_ >= timesteps_){
+            double average(0.);
+            TetLoop::Tet
+                    worstInside(CellHandle(-1), 0),
+                    worstBoundary(CellHandle(-1), 0);
+            for(auto ch: tetmesh_.cells()){
+                double quality = QualityEvaluation::evaluate(ch, tetmesh_);
+                average += quality;
+                if(tetmesh_.is_boundary(ch) && quality < worstBoundary.quality_){
+                    worstBoundary.cell_handle_ = ch;
+                    worstBoundary.quality_ = quality;
+                }else if(!tetmesh_.is_boundary(ch) && quality < worstInside.quality_){
+                    worstInside.cell_handle_ = ch;
+                    worstInside.quality_ = quality;
+                }
+            }
+            average /= tetmesh_.n_logical_cells();
+
             std::cout << "Experiment ended" << std::endl;
-            tool_->nextButton->setEnabled(false);
-            tool_->beginExpButton->setEnabled(true);
-            tool_->experiment_tabs->setEnabled(true);
-            tool_->timestepsSpinBox->setEnabled(true);
-            tool_->experiment2D->setEnabled(true);
-            tool_->experiment3D->setEnabled(true);
-            tool_->qualitySpinBox->setEnabled(true);
+            std::cout << "Worst boundary cell: "<< worstBoundary.cell_handle_ <<
+                      ", q="<< worstBoundary.quality_<< std::endl;
+            std::cout << "Worst interior cell: "<< worstInside.cell_handle_ <<
+                      ", q="<< worstInside.quality_<< std::endl;
+            std::cout << "Average mesh quality: "<< average << std::endl;
+            std::cout << "Experiment ended" << std::endl;
+            tool_->nextButton       ->setEnabled(false);
+            tool_->completeButton   ->setEnabled(false);
+            tool_->beginExpButton   ->setEnabled(true);
+            tool_->experiment_tabs  ->setEnabled(true);
+            tool_->timestepsSpinBox ->setEnabled(true);
+            tool_->experiment2D     ->setEnabled(true);
+            tool_->experiment3D     ->setEnabled(true);
+            tool_->splitCheckBox    ->setEnabled(true);
+            tool_->splitSpinBox     ->setEnabled(true);
+            tool_->worldSpaceCheck  ->setEnabled(true);
+            tool_->angleSpinBox     ->setEnabled(true);
+            tool_->qualitySpinBox   ->setEnabled(true);
         }
     }
 }
@@ -493,6 +538,31 @@ void MasterPlugin::generate_tet_mesh(){
 
     TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::
             generate_mesh(dimension, dimension,dimension*2, *mesh);
+
+    //split boundary edges
+    if(tool_->splitCheckBox->isChecked()){
+        int splits = tool_->splitSpinBox->value();
+        std::cout<<" - running "<<splits<<" split passes on the boundary"<<std::endl;
+        for(int i(0); i<splits; i++){
+            //std::vector<EdgeHandle> to_split;
+            EntityPriorityQueue<EdgeHandle, double> to_split;
+            for(auto e: mesh->edges()){
+                if(mesh->is_boundary(e)){
+                    //to_split.push_back(e);
+                    double len = (mesh->vertex(mesh->edge(e).from_vertex()) - mesh->vertex(mesh->edge(e).to_vertex())).norm();
+                    to_split.push(e, -len);
+                }
+            }
+            while(!to_split.empty()){
+                auto e = to_split.front();
+                to_split.pop();
+                mesh->split_edge(e);
+            }
+            /*for(auto e: to_split){
+                    mesh.split_edge(e);
+                }*/
+        }
+    }
 
     QualityEvaluation::scaleMesh(*mesh);
 

@@ -41,7 +41,16 @@ double QualityEvaluation::symmetric_dirichlet_energy(const TetrahedralMesh& mesh
     E_ref.col(2) = P_ref.col(3) - P_ref.col(0);
     Eigen::Matrix3d E_ref_inv = E_ref.inverse();
 
-    Eigen::MatrixXd J = E * E_ref_inv;
+
+    double vol = E.determinant() / 6.0;
+    if(vol <= DBL_EPSILON){
+        return std::numeric_limits<double>::infinity();
+    }
+    double ref_vol = E_ref.determinant() / 6.0;
+
+    double coeff = std::pow(ref_vol /  vol, 1.0/3.0);
+
+    Eigen::MatrixXd J = coeff * (E * E_ref_inv);
 
     auto d = J.determinant();
     if(d <= DBL_EPSILON){

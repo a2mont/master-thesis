@@ -5,7 +5,7 @@ void Experiment3D::generate_torsion_mesh(double torsion_turns_count, bool _withR
 //    TetrahedralMesh mesh;
 //    TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::generate_mesh(10, 10, 10, mesh);
     double target_angle = torsion_turns_count * 2 * M_PI;
-    double boundaryOnly(true);
+    double boundaryOnly(false);
 
     Eigen::Vector3d min_pos(std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
     Eigen::Vector3d max_pos(0.0, 0.0, 0.0);

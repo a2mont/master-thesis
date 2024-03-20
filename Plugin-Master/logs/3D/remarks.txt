@@ -1,0 +1,21 @@
+Timesteps for angle experiment (boundaryOnly=false):
+1800
+900
+450
+300
+200
+180
+90
+45
+30  
+20  
+18
+9
+
+2,27875,69.4474,13.6415,boundaryOnly = true
+
+Quality experiment (boundaryOnly=true):
+timesteps=360
+
+Turn experiment (boundaryOnly = false)
+angle = 0.5°

@@ -277,20 +277,22 @@ void MasterPlugin::slot_start_experiment(){
     timesteps_ = tool_->timestepsSpinBox->value();
     q_min_ = tool_->qualitySpinBox->value();
     bool useWorld = tool_->worldSpaceCheck->isChecked();
-    bool autocomplete(true);
+    bool autocomplete = tool_->autoCompleteCheckBox->isChecked();
 
-    tool_->nextButton->setEnabled(true);
-    tool_->completeButton->setEnabled(true);
-    tool_->beginExpButton->setEnabled(false);
-    tool_->experiment_tabs->setEnabled(false);
-    tool_->timestepsSpinBox->setEnabled(false);
-    tool_->qualitySpinBox->setEnabled(false);
-    tool_->experiment2D->setEnabled(false);
-    tool_->experiment3D->setEnabled(false);
-    tool_->splitCheckBox->setEnabled(false);
-    tool_->splitSpinBox->setEnabled(false);
-    tool_->worldSpaceCheck->setEnabled(false);
-    tool_->angleSpinBox->setEnabled(false);
+    tool_->nextButton       ->setEnabled(true);
+    tool_->completeButton   ->setEnabled(true);
+    tool_->beginExpButton   ->setEnabled(false);
+    tool_->experiment_tabs  ->setEnabled(false);
+    tool_->timestepsSpinBox ->setEnabled(false);
+    tool_->qualitySpinBox   ->setEnabled(false);
+    tool_->experiment2D     ->setEnabled(false);
+    tool_->experiment3D     ->setEnabled(false);
+    tool_->splitCheckBox    ->setEnabled(false);
+    tool_->splitSpinBox     ->setEnabled(false);
+    tool_->worldSpaceCheck  ->setEnabled(false);
+    tool_->angleSpinBox     ->setEnabled(false);
+    tool_->stretchSpinBox   ->setEnabled(false);
+    tool_->autoCompleteCheckBox->setEnabled(false);
 
     // -------------------------- 2D --------------------
     for (PluginFunctions::ObjectIterator o_it(PluginFunctions::TARGET_OBJECTS, DATA_TRIANGLE_MESH);
@@ -377,6 +379,7 @@ void MasterPlugin::slot_experiment_loop(){
             tool_->splitSpinBox     ->setEnabled(true);
             tool_->worldSpaceCheck  ->setEnabled(true);
             tool_->angleSpinBox     ->setEnabled(true);
+            tool_->stretchSpinBox   ->setEnabled(true);
             tool_->qualitySpinBox   ->setEnabled(true);
         }
     }
@@ -386,14 +389,27 @@ void MasterPlugin::slot_experiment_loop(){
         auto *tet_obj = PluginFunctions::tetrahedralMeshObject(*o_it);
         auto *tetmesh = tet_obj->mesh();
         double nbLoops = tool_->angleSpinBox->value();
+        double stretch = tool_->stretchSpinBox->value();
         std::cout << "\033[1;35mTimestep: "<< t_<< "/"<< timesteps_<< "\033[0m" << std::endl;
-        experiment3D_->generate_torsion_mesh(nbLoops/timesteps_);
-        ++t_;
+        /* indices 2D :
+         * 0: Spin
+         * 1: Stretch
+        */
+        switch (tool_->experiment3D->currentIndex()) {
+            case 0:
+                experiment3D_->generate_torsion_mesh(nbLoops/timesteps_);
+                break;
+            case 1:
+                experiment3D_->generate_stretch_mesh(std::pow(stretch,1.0/timesteps_));
+                break;
+            default:
+                break;
+        }
 
+        ++t_;
         *tetmesh = tetmesh_;
         tetmesh->collect_garbage();
 
-        emit updatedObject(tet_obj->id(), UPDATE_ALL);
 
         // reset when done with experiment
         if(t_ >= timesteps_){
@@ -433,7 +449,11 @@ void MasterPlugin::slot_experiment_loop(){
             tool_->worldSpaceCheck  ->setEnabled(true);
             tool_->angleSpinBox     ->setEnabled(true);
             tool_->qualitySpinBox   ->setEnabled(true);
+            tool_->stretchSpinBox   ->setEnabled(true);
+            tool_->autoCompleteCheckBox->setEnabled(true);
         }
+
+        emit updatedObject(tet_obj->id(), UPDATE_ALL);
     }
 }
 

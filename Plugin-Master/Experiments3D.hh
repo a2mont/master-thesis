@@ -2,7 +2,6 @@
 #define OPENFLIPPER_EXPERIMENTS3D_HH
 
 #include "TetLoop.hh"
-#include "TetrahedralizedVoxelGridGenerator.hh"
 
 class Experiment3D
 {
@@ -22,7 +21,8 @@ private:
 public:
     //3D
     void generate_torsion_mesh(double torsion_turns_count, bool _withRemesh = true);
-
+    void generate_stretch_mesh(double stretch_factor, bool _withRemesh = true);
+    void generate_compress_mesh(double stretch_factor, bool _withRemesh = true);
 };
 
 #endif // OPENFLIPPER_EXPERIMENTS3D_HH

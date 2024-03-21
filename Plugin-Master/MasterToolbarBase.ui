@@ -273,22 +273,6 @@
            <layout class="QGridLayout" name="gridLayout_7">
             <item row="0" column="0">
              <layout class="QGridLayout" name="gridLayout_9">
-              <item row="1" column="2">
-               <spacer name="horizontalSpacer_5">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::Fixed</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
               <item row="1" column="0">
                <widget class="QSpinBox" name="timestepsSpinBox">
                 <property name="suffix">
@@ -324,7 +308,49 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="0">
+              <item row="1" column="2">
+               <spacer name="horizontalSpacer_5">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Fixed</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="0" column="3">
+               <widget class="QCheckBox" name="splitCheckBox">
+                <property name="text">
+                 <string>Split surface</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3">
+               <widget class="QDoubleSpinBox" name="stretchSpinBox">
+                <property name="prefix">
+                 <string>Stretch: </string>
+                </property>
+                <property name="suffix">
+                 <string>x</string>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>2.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
                <widget class="QDoubleSpinBox" name="angleSpinBox">
                 <property name="prefix">
                  <string>Turns:  </string>
@@ -337,17 +363,7 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="3">
-               <widget class="QCheckBox" name="splitCheckBox">
-                <property name="text">
-                 <string>Split surface</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="3">
+              <item row="2" column="0">
                <widget class="QDoubleSpinBox" name="qualitySpinBox">
                 <property name="prefix">
                  <string>Minimal quality: </string>
@@ -366,7 +382,7 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="3">
+              <item row="2" column="3">
                <widget class="QSpinBox" name="splitSpinBox">
                 <property name="prefix">
                  <string>Split passes: </string>
@@ -378,17 +394,7 @@
               </item>
              </layout>
             </item>
-            <item row="2" column="0">
-             <widget class="QPushButton" name="completeButton">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="text">
-               <string>Complete experiment</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
+            <item row="4" column="0">
              <widget class="QPushButton" name="nextButton">
               <property name="enabled">
                <bool>false</bool>
@@ -398,13 +404,33 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="0">
+            <item row="2" column="0">
              <widget class="QPushButton" name="beginExpButton">
               <property name="text">
                <string>Begin</string>
               </property>
               <property name="checkable">
                <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QPushButton" name="completeButton">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Complete experiment</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QCheckBox" name="autoCompleteCheckBox">
+              <property name="text">
+               <string>Autocomplete</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -462,6 +488,11 @@
                  <item>
                   <property name="text">
                    <string>Spin</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Stretch</string>
                   </property>
                  </item>
                 </widget>

@@ -14,6 +14,18 @@ Timesteps for angle experiment (boundaryOnly=false):
 
 2,27875,69.4474,13.6415,boundaryOnly = true
 
+Wm experiment (boundaryOnly = false)
+timesteps = 360
+without: 
+    Complete experiment time done in 
+    1 min 7 s 225 ms
+    2 min 45 s 117 ms
+with:
+    Complete experiment time done in 
+    2 min 36 s 515 ms
+    9 min 31 s 77 ms
+
+
 Quality experiment (boundaryOnly=true):
 timesteps=360
 

@@ -1165,7 +1165,7 @@ void TetLoop::flip32(TetrahedralMesh& _mesh,
 void TetLoop::flip23(TetrahedralMesh& _mesh,
                      FaceHandle _fh,
                      std::vector<CellHandle>& _cellsAdded){
-    bool printDebug(true);
+    bool printDebug(false);
     if(_mesh.is_deleted(_fh) || _mesh.is_boundary(_fh)){
         if(printDebug){
             std::cout << "2-3 flip on a deleted/boundary face" << std::endl;

@@ -6,7 +6,6 @@ import re
 
 def find_files(regex: re.Pattern, dimension='3D'):
     filenames = []
-
     for _, _, files in os.walk(f'./{dimension}/'):
         for file in files:
             if regex.match(file):
@@ -15,8 +14,8 @@ def find_files(regex: re.Pattern, dimension='3D'):
     print(f'{len(filenames)} files:\n{filenames}')
     return filenames
 
-def extract_data(files: list, drop_zeros: bool = False, dimension='3D'):
-    datas = None
+def extract_data(files: list, dimension='3D'):
+    datas = names = None
     is_zero = lambda x: abs(float(x)) < 1e-6 
     file_id = 0
     for file in files:
@@ -24,17 +23,15 @@ def extract_data(files: list, drop_zeros: bool = False, dimension='3D'):
         with open(file) as f:
             reader = csv.reader(f, delimiter=',')
             first_line = next(reader)
+            names = first_line
             # check for initialization
             if(datas == None):
                 datas = [[[] for _ in range(len(files))] for _ in range(len(first_line))]
-            last_row = np.zeros(len(first_line))
             for row in reader:
                 [datas[i][file_id].append(float(row[i])) if row[i] != 'nan' 
-                 else datas[i][file_id].append(last_row[i]) for i in range(len(first_line)) if i < len(row)]
-                last_row = row
+                 else datas[i][file_id].append(0) for i in range(len(first_line)) if i < len(row)]
         file_id += 1
-
-    return datas, first_line
+    return datas, names
 
 def inverse_data(data: list):
     return [-float(x) for x in data]
@@ -53,15 +50,15 @@ def plot_quality(q_mins: list, qualities: list, deltas: dict, deltas_rejected: d
             id_row = int(i / 2)
             id_col = i % cols
             twin = ax[id_row,id_col].twinx()
-            plot_deltas(twin, deltas, deltas_rejected)
+            # plot_deltas(twin, deltas, deltas_rejected)
             quality_ax(ax[id_row,id_col], x, y, -q_min)
         elif cols > 1:
             twin = ax[i].twinx()
-            plot_deltas(twin, deltas, deltas_rejected)
+            # plot_deltas(twin, deltas, deltas_rejected)
             quality_ax(ax[i], x, y, -q_min)
         else:
             twin = ax.twinx()
-            plot_deltas(twin, deltas, deltas_rejected)
+            # plot_deltas(twin, deltas, deltas_rejected)
             quality_ax(ax, x, y, -q_min)
 
 
@@ -74,6 +71,8 @@ def quality_ax(ax: plt.Axes, x, y ,q_min):
 
 def quality_vector(init: float, q_before: list, q_after: list):
     q_list = [init]
+    q_before = [x for x in q_before if x != 0]
+    q_after = [x for x in q_after if x != 0]
     pairs = list(zip(q_before,q_after))
     [q_list.extend([before,after]) for before,after in pairs]
     return q_list    
@@ -108,8 +107,8 @@ def plot_deltas(ax: plt.Axes, deltas: dict, deltas_rejected: dict):
         i += 1
 
 
-def time_angle_experiment(turn:float=180, q_min: float = 40):
-    filename = f"angle{turn}_q_min{q_min}.csv"
+def timesteps_experiment(turn:float=180, q_min: float = 40):
+    filename = f"angle_spin/angle{turn}_q_min{q_min}.csv"
     data,names = extract_data([filename])
     angles      = [x for x in data[0][0]]
     times       = [x/1000 for x in data[1][0]]
@@ -120,6 +119,7 @@ def time_angle_experiment(turn:float=180, q_min: float = 40):
     fig.suptitle(f'Angle to time with q_min={q_min}')
     ax.set_xscale('log')
     ax.set_ylabel('Time (s)')
+    ax.set_ylabel('Timesteps')
 
     quality_color = 'red'
     average_color='green'
@@ -143,11 +143,13 @@ def time_angle_experiment(turn:float=180, q_min: float = 40):
     lines2,labels2 = twin2.get_legend_handles_labels()
     ax.legend(lines+lines2, labels+labels2, loc='upper left')
 
-def quality_experiment():
+def quality_experiment(experiment):
     filename = "logs_"
     regex = re.compile(f'({filename}.*\.csv$)')
-    files = find_files(regex)
-    data, names = extract_data(files)
+    files = find_files(regex, f"3D/quality_{experiment}")
+    if len(files) == 0: return
+
+    data, names = extract_data(files, f"3D/quality_{experiment}")
     data = data[:-1]
     names = names[:-1]
     pairs = zip(names,data)
@@ -155,7 +157,6 @@ def quality_experiment():
 
     # Q min is constant
     label_data['Quality_min'] = [label_data['Quality_min'][i][0]for i in range(len(files))]
-
     q_vectors = [quality_vector(label_data['Initial'][i][0], label_data['Before'][i], label_data['After'][i]) for i in range(len(files))]
     q_vectors_avg = [quality_vector(label_data['Initial_avg'][i][0], label_data['Before_avg'][i], label_data['After_avg'][i]) for i in range(len(files))]
 
@@ -189,7 +190,7 @@ def quality_experiment():
 
 def turn_experiment(q_min:float = 50):
     filename = f"turn_q_min{q_min}.csv"
-    data,names = extract_data([filename])
+    data,names = extract_data([filename], "3D/turn_experiment")
     turn      = [x for x in data[0][0]]
     times       = [x/1000 for x in data[1][0]]
     quality     = [x for x in data[2][0]]
@@ -223,13 +224,65 @@ def turn_experiment(q_min:float = 50):
     lines2,labels2 = twin2.get_legend_handles_labels()
     ax.legend(lines+lines2, labels+labels2, loc='upper left')
 
+def wm_experiment():
+    filename = "logs_"
+    regex = re.compile(f'({filename}.*\.csv$)')
+    files = find_files(regex, f"3D/wm_experiment")
+    if len(files) == 0: return
+
+    data, names = extract_data(files, f"3D/wm_experiment")
+    data = data[:-1]
+    names = names[:-1]
+    pairs = zip(names,data)
+    label_data = dict((name,value) for name, value in pairs)
+
+    # Q min is constant
+    label_data['Quality_min'] = [-label_data['Quality_min'][i][0] for i in range(len(files))]
+    q_vectors = [quality_vector(label_data['Initial'][i][0], label_data['Before'][i], label_data['After'][i]) for i in range(len(files))]
+    q_vectors = [inverse_data(vec) for vec in q_vectors]
+
+    fig,ax = plt.subplots(2, figsize=(10,8))
+    x = np.arange(0, len(q_vectors[0])/2, 0.5)
+    ax[0].plot(x,q_vectors[0], label="No world mesh")
+    ax[0].plot(x,q_vectors[1], label="With world mesh")
+    # ax[0].text(-1.5,label_data['Quality_min'][0] + 0.1, f'{label_data['Quality_min'][0]}', color='r')
+    ax[0].axhline(y=float(label_data['Quality_min'][0]), color='r', alpha=0.5, linestyle='dashed', label='Minimal quality')
+    
+    ax[1].plot(x,q_vectors[0])
+    ax[1].plot(x,q_vectors[1])
+    # ax[1].text(-1.5,label_data['Quality_min'][0] + 0.1, f'{label_data['Quality_min'][0]}', color='r')
+    ax[1].axhline(y=float(label_data['Quality_min'][0]), color='r', alpha=0.5, linestyle='dashed')
+    ax[1].set_xlim(180,360)
+    fig.legend()
+
+    
+
+    
+    
+
 
 def main():
-    # time_angle_experiment(40)
-    # time_angle_experiment(50)
-    # time_angle_experiment(360,80)
-    quality_experiment()
+    # Angle timesteps experiment
+    # timesteps_experiment(180,35)
+    # timesteps_experiment(180,40)
+    # timesteps_experiment(180,50)
+    # timesteps_experiment(360,80)
+
+    # Quality spin epxeriment
+    experiments = ["spin","stretch"]
+    # [quality_experiment(exp) for exp in experiments]
+
+    # Turn experiment
     # turn_experiment()
+
+    # Stretch experiment
+    # todo: experiment
+
+    # Stretch timesteps exeperiment
+
+    # Wm vs no wm experiment
+    wm_experiment()
+
     plt.show()
     
 

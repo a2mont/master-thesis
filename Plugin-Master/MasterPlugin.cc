@@ -559,6 +559,20 @@ void MasterPlugin::generate_tet_mesh(){
     TetrahedralizedVoxelGridGenerator<TetrahedralMesh>::
             generate_mesh(dimension, dimension,dimension*2, *mesh);
 
+    std::vector<EdgeHandle> edges;
+    for(auto e: mesh->edges()){
+        if(mesh->is_boundary(e)) continue;
+        VertexHandle from,to;
+        from = mesh->from_vertex_handle(mesh->halfedge_handle(e,0));
+        to = mesh->to_vertex_handle(mesh->halfedge_handle(e,0));
+        if(mesh->is_boundary(from) && mesh->is_boundary(to)){
+            edges.push_back(e);
+        }
+    }
+    for(EdgeHandle eh: edges){
+        mesh->split_edge(eh);
+    }
+
     //split boundary edges
     if(tool_->splitCheckBox->isChecked()){
         int splits = tool_->splitSpinBox->value();

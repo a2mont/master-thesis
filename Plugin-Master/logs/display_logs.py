@@ -40,8 +40,10 @@ def inverse_data(data: list):
 def plot_quality(q_mins: list, qualities: list, deltas: dict, deltas_rejected: dict, title: list = 'Title'):
     rows = int(np.ceil(len(q_mins)/2))
     cols = 2 if len(q_mins) > 1 else 1
-    fig, ax = plt.subplots(rows, cols, figsize=(10,8))
+    fig, ax = plt.subplots(rows, cols, figsize=(10,8), sharey='all')
     fig.suptitle(title, fontsize=16)
+    
+    handles = labels = []
 
     for i,q_min in enumerate(q_mins):
         x = np.arange(0, len(qualities[i])/2, 0.5)
@@ -49,25 +51,30 @@ def plot_quality(q_mins: list, qualities: list, deltas: dict, deltas_rejected: d
         if rows > 1:
             id_row = int(i / 2)
             id_col = i % cols
-            twin = ax[id_row,id_col].twinx()
+            # twin = ax[id_row,id_col].twinx()
             # plot_deltas(twin, deltas, deltas_rejected)
             quality_ax(ax[id_row,id_col], x, y, -q_min)
+            handles,labels = ax[id_row,id_col].get_legend_handles_labels()
         elif cols > 1:
-            twin = ax[i].twinx()
+            # twin = ax[i].twinx()
             # plot_deltas(twin, deltas, deltas_rejected)
             quality_ax(ax[i], x, y, -q_min)
+            handles,labels = ax[i].get_legend_handles_labels()
         else:
-            twin = ax.twinx()
+            # twin = ax.twinx()
             # plot_deltas(twin, deltas, deltas_rejected)
             quality_ax(ax, x, y, -q_min)
+            handles,labels = ax.get_legend_handles_labels()
+
+    labels_no_dupl = dict(zip(labels, handles))
+    fig.legend(labels_no_dupl.values(),labels_no_dupl.keys())
 
 
 def quality_ax(ax: plt.Axes, x, y ,q_min):
-    ax.plot(x,y)
+    ax.plot(x,y, label="Quality")
     ax.set_title(f'Quality min={q_min}')
     ax.text(-1.5,q_min + 0.1, f'{q_min}', color='r')
     ax.axhline(y=float(q_min), color='r', alpha=0.5, linestyle='dashed', label='Minimal quality')
-    ax.legend()
 
 def quality_vector(init: float, q_before: list, q_after: list):
     q_list = [init]
@@ -119,7 +126,7 @@ def timesteps_experiment(turn:float=180, q_min: float = 40):
     fig.suptitle(f'Angle to time with q_min={q_min}')
     ax.set_xscale('log')
     ax.set_ylabel('Time (s)')
-    ax.set_ylabel('Timesteps')
+    ax.set_xlabel('Timesteps')
 
     quality_color = 'red'
     average_color='green'
@@ -131,9 +138,7 @@ def timesteps_experiment(turn:float=180, q_min: float = 40):
     twin2.tick_params(axis='y', colors=average_color)
     twin2.set_ylabel('Deformation energies')
 
-    widths = np.pad(np.diff(angles), (0,1), mode="edge")
-
-    ax.bar(angles,times, color=base_color, edgecolor=f'dark{base_color}', width=widths, align='edge')
+    ax.plot(angles,times, color=base_color, label="Time")
     twin1.plot(angles, quality, color=quality_color, label="Worst element")
     twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Minimal quality')
     twin2.plot(angles, quality_avg, color=average_color, label="Mesh average quality")
@@ -255,9 +260,76 @@ def wm_experiment():
     ax[1].set_xlim(180,360)
     fig.legend()
 
+def stretch_experiment(stretch_coeff, q_min):    
+    filename = f"stretch_experiment/stretch{stretch_coeff}_qmin_{q_min}.csv"
+    data,names = extract_data([filename])
+    angles      = [x for x in data[0][0]]
+    times       = [x/1000 for x in data[1][0]]
+    quality     = [x for x in data[2][0]]
+    quality_avg = [x for x in data[3][0]]
+    fig, ax = plt.subplots(figsize=(10,8))
+    fig.subplots_adjust(right=0.75)
+    fig.suptitle(f'Stretch to time with q_min={q_min}')
+    ax.set_xscale('log')
+    ax.set_ylabel('Time (s)')
+    ax.set_xlabel('Timesteps')
+
+    quality_color = 'red'
+    average_color='green'
+    base_color = 'blue'
+
+    twin1 = ax.twinx()
+    twin1.tick_params(axis='y', colors=quality_color)
+    twin2 = ax.twinx()
+    twin2.tick_params(axis='y', colors=average_color)
+    twin2.set_ylabel('Deformation energies')
+
+    ax.plot(angles,times, color=base_color, label='Time')
+    twin1.plot(angles, quality, color=quality_color, label="Worst element")
+    twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Minimal quality')
+    twin2.plot(angles, quality_avg, color=average_color, label="Mesh average quality")
+    twin2.spines.right.set_position(("axes", 1.2))
+
+    lines,labels = twin1.get_legend_handles_labels()
+    lines2,labels2 = twin2.get_legend_handles_labels()
+    ax.legend(lines+lines2, labels+labels2, loc='upper left')
     
 
-    
+def length_experiment(q_min:float = 50):
+    filename = f"length_q_min{q_min}.csv"
+    data,names = extract_data([filename], "3D/length_experiment")
+    length      = [x for x in data[0][0]]
+    times       = [x/1000 for x in data[1][0]]
+    quality     = [x for x in data[2][0]]
+    quality_avg = [x for x in data[3][0]]
+
+    fig, ax = plt.subplots(figsize=(10,8))
+    fig.subplots_adjust(right=0.75)
+    fig.suptitle(f'Time to length with q_min={q_min}')
+
+    ax.set_xticks(length)
+    ax.set_ylabel('Time (s)')
+
+    quality_color = 'red'
+    average_color='green'
+    base_color = 'blue'
+
+    twin1 = ax.twinx()
+    twin1.tick_params(axis='y', colors=quality_color)
+    twin2 = ax.twinx()
+    twin2.tick_params(axis='y', colors=average_color)
+    twin2.set_ylabel('Deformation energies')
+
+    ax.bar(length,times, color=base_color, edgecolor=f'dark{base_color}', width=10)
+    twin1.plot(length, quality, color=quality_color, label="Worst element")
+    twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Minimal quality')
+    twin2.plot(length, quality_avg, color=average_color, label="Mesh average quality")
+    twin2.spines.right.set_position(("axes", 1.2))
+
+    lines,labels = twin1.get_legend_handles_labels()
+    lines2,labels2 = twin2.get_legend_handles_labels()
+    ax.legend(lines+lines2, labels+labels2, loc='upper left')
+
     
 
 
@@ -273,12 +345,13 @@ def main():
     # [quality_experiment(exp) for exp in experiments]
 
     # Turn experiment
-    # turn_experiment()
+    turn_experiment()
 
-    # Stretch experiment
-    # todo: experiment
+    # Length experiment
+    length_experiment(40)
 
-    # Stretch timesteps exeperiment
+    # Stretch timesteps experiment
+    # stretch_experiment("1_7x",35)
 
     # Wm vs no wm experiment
     wm_experiment()
@@ -293,7 +366,7 @@ if __name__ == "__main__":
 
 
 
-
+# ------------------- OLD ------------------------------------
 
 # def plot_deltas(q_mins: list, deltas: dict):
 #     for id,q_min in enumerate(q_mins):

@@ -26,8 +26,30 @@ with:
     9 min 31 s 77 ms
 
 
-Quality experiment (boundaryOnly=true):
+Quality spin experiment (boundaryOnly=true):
 timesteps=360
 
 Turn experiment (boundaryOnly = false)
 angle = 0.5°
+
+Quality stretch experiment:
+timesteps=300
+stretch=1.7
+
+Timesteps for stretch experiment:
+1000
+500
+400
+300
+200
+100
+50
+10
+
+Timesteps for length experiment (q_min=40)
+1.5 -> 265 (q_min not reached)
+1.6 -> 283
+1.7 -> 300
+1.8 -> 318
+1.9 -> 335
+2.0 -> 353

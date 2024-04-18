@@ -3,7 +3,6 @@
 void TetLoop::loop(int _max_iter){
     auto begin = std::chrono::high_resolution_clock::now();
     double qualityBefore = -std::numeric_limits<double>::infinity();
-    static bool collapse(false);
     for(int i=0; i < _max_iter; ++i){
         PriorityQueue worstTets;
 
@@ -44,10 +43,7 @@ void TetLoop::loop(int _max_iter){
             // subdivision pass on boundary cells
             double delta(0);
 //            subdivision_pass(worstTets,delta);
-            if(false){
-                collapse_surface_pass(worstTets,delta);
-                collapse = true;
-            }
+//            collapse_surface_pass(worstTets,delta);
             improve_mesh(worstTets);
         }
     }

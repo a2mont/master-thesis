@@ -123,6 +123,7 @@ void MasterPlugin::slot_complete_experiment(){
     std::cout << "Remaining timesteps: "<< remain << std::endl;
     for(remain; remain > 0; --remain){
         tool_->nextButton->click();
+//        if(remain % 10 == 0)break;
     }
 
 }
@@ -437,6 +438,7 @@ void MasterPlugin::slot_experiment_loop(){
                       ", q="<< worstInside.quality_<< std::endl;
             std::cout << "Average mesh quality: "<< average << std::endl;
             std::cout << "Experiment ended" << std::endl;
+
             tool_->nextButton       ->setEnabled(false);
             tool_->completeButton   ->setEnabled(false);
             tool_->beginExpButton   ->setEnabled(true);
@@ -592,9 +594,6 @@ void MasterPlugin::generate_tet_mesh(){
                 to_split.pop();
                 mesh->split_edge(e);
             }
-            /*for(auto e: to_split){
-                    mesh.split_edge(e);
-                }*/
         }
     }
 

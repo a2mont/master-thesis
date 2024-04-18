@@ -10,7 +10,7 @@ class Experiment
 public:
     Experiment(TriMesh& _mesh, TriMesh& _worldMesh,std::map<int,Point> _basePoints, const double _q_min, std::map<int,int>& _constraint_vhs):
         mesh_(_mesh),
-        loop(_mesh, _worldMesh, _q_min, _constraint_vhs, true),
+        loop(_mesh, _worldMesh, _q_min, _constraint_vhs, false),
         basePoints_(_basePoints)
     {}
 

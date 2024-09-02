@@ -40,7 +40,7 @@ def inverse_data(data: list):
 def plot_quality(q_mins: list, qualities: list, deltas: dict, deltas_rejected: dict, title: list = 'Title'):
     rows = int(np.ceil(len(q_mins)/2))
     cols = 2 if len(q_mins) > 1 else 1
-    fig, ax = plt.subplots(rows, cols, figsize=(10,8), sharey='all')
+    fig, ax = plt.subplots(rows, cols, figsize=(10,8))
     fig.suptitle(title, fontsize=16)
     
     handles = labels = []
@@ -71,10 +71,11 @@ def plot_quality(q_mins: list, qualities: list, deltas: dict, deltas_rejected: d
 
 
 def quality_ax(ax: plt.Axes, x, y ,q_min):
-    ax.plot(x,y, label="Energy")
-    ax.set_title(f'Max deformation = {q_min}')
+    ax.set_ylim([20,80])
+    ax.plot(x,y, label="Final energy")
+    ax.set_title(f'Energy threshold = {q_min}')
     ax.text(-1.5,q_min + 0.1, f'{q_min}', color='r')
-    ax.axhline(y=float(q_min), color='r', alpha=0.5, linestyle='dashed', label='Maximal deformation')
+    ax.axhline(y=float(q_min), color='r', alpha=0.5, linestyle='dashed', label='Energy threshold')
 
 def quality_vector(init: float, q_before: list, q_after: list):
     q_list = [init]
@@ -121,37 +122,38 @@ def timesteps_experiment(turn:float=180, q_min: float = 40):
     times       = [x/1000 for x in data[1][0]]
     quality     = [x for x in data[2][0]]
     quality_avg = [x for x in data[3][0]]
-    fig, ax = plt.subplots(figsize=(10,8))
-    fig.subplots_adjust(right=0.75)
+    fig, ax = plt.subplots(2,1, figsize=(10,8), gridspec_kw={'height_ratios': [3, 1]})
     fig.suptitle(f'Angle to time with max deformation = {q_min}')
-    ax.set_xscale('log')
-    ax.set_ylabel('Time (s)')
-    ax.set_xlabel('Timesteps')
+    ax[0].set_xscale('log')
+    ax[1].set_xscale('log')
+    ax[0].set_ylabel('Time (s)')
+    ax[1].set_xlabel('Number of timesteps')
+    ax[1].yaxis.tick_right()
+    ax[1].yaxis.set_label_position("right")
 
-    ax.set_ylim([0, 400])
+    # ax[0].set_ylim([0, 400])
 
     quality_color = 'red'
     average_color='green'
     base_color = 'blue'
 
-    twin1 = ax.twinx()
-    twin1.tick_params(axis='y', colors=quality_color)
-    twin1.set_ylim([30,75])
-    twin2 = ax.twinx()
-    twin2.set_ylim([12.3,12.55])
-    twin2.tick_params(axis='y', colors=average_color)
-    twin2.set_ylabel('Deformation energies')
+    twin1 = ax[0].twinx()
+    # twin1.set_ylim([30,80])
+    # twin2 = ax.twinx()
+    # ax[1].set_ylim([12.3,12.55])
+    twin1.set_ylabel('Deformation energies')
 
-    ax.plot(angles,times, color=base_color, label="Time")
-    twin1.plot(angles, quality, color=quality_color, label="Worst element")
-    twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Maximal energy')
-    twin2.plot(angles, quality_avg, color=average_color, label="Mesh average energy")
-    twin2.spines.right.set_position(("axes", 1.2))
+    ax[0].plot(angles,times, color=base_color, label="Execution time")
+    twin1.plot(angles, quality, color=quality_color, label="Final worst element")
+    twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Energy threshold')
+    ax[1].plot(angles, quality_avg, color=average_color, label="Final mesh average energy")
 
-    lines,labels = ax.get_legend_handles_labels()
+
+    lines,labels = ax[0].get_legend_handles_labels()
     lines1,labels1 = twin1.get_legend_handles_labels()
-    lines2,labels2 = twin2.get_legend_handles_labels()
-    ax.legend(lines+lines1+lines2, labels+labels1+labels2)
+    # lines2,labels2 = ax[1].get_legend_handles_labels()
+    ax[0].legend(lines+lines1, labels+labels1)
+    ax[1].legend()
     # fig.savefig(f"3D/angle_spin/angle{turn}_q_min{q_min}")
 
 def quality_experiment(experiment):
@@ -207,34 +209,33 @@ def turn_experiment(q_min:float = 50):
     quality     = [x for x in data[2][0]]
     quality_avg = [x for x in data[3][0]]
 
-    fig, ax = plt.subplots(figsize=(10,8))
-    fig.subplots_adjust(right=0.75)
-    fig.suptitle(f'Time to turn with max deformation = {q_min}')
+    fig, ax = plt.subplots(2,1, figsize=(10,8), gridspec_kw={'height_ratios': [3, 1]})
+    fig.suptitle(f'Time to turn with remeshing threshold = {q_min}')
 
-    ax.set_xticks(np.arange(90, 450, 90))
-    ax.set_yscale('log')
-    ax.set_ylabel('Time (s)')
-    ax.set_xlabel('Total rotation (°)')
+    ax[0].set_xticks(np.arange(90, 450, 90))
+    ax[1].set_xticks(np.arange(90, 450, 90))
+    ax[0].set_yscale('log')
+    ax[0].set_ylabel('Time (s)')
+    ax[1].set_xlabel('Total rotation (°)')
+    ax[1].yaxis.tick_right()
+    ax[1].yaxis.set_label_position("right")
 
     quality_color = 'red'
     average_color='green'
     base_color = 'blue'
 
-    twin1 = ax.twinx()
-    twin1.tick_params(axis='y', colors=quality_color)
-    twin2 = ax.twinx()
-    twin2.tick_params(axis='y', colors=average_color)
-    twin2.set_ylabel('Deformation energies')
+    twin1 = ax[0].twinx()
+    twin1.set_ylabel('Deformation energies')
 
-    ax.plot(turn,times, color=base_color)
-    twin1.plot(turn, quality, color=quality_color, label="Worst element")
-    twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Maximal energy')
-    twin2.plot(turn, quality_avg, color=average_color, label="Mesh average energy")
-    twin2.spines.right.set_position(("axes", 1.2))
+    ax[0].plot(turn,times, color=base_color)
+    twin1.plot(turn, quality, color=quality_color, label="Final worst element")
+    twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Remeshing threshold')
+    ax[1].plot(turn, quality_avg, color=average_color, label="Final mesh average energy")
 
     lines,labels = twin1.get_legend_handles_labels()
-    lines2,labels2 = twin2.get_legend_handles_labels()
-    ax.legend(lines+lines2, labels+labels2, loc='upper left')
+    lines2,labels2 = ax[1].get_legend_handles_labels()
+    ax[0].legend(lines, labels, loc='upper left')
+    ax[1].legend(lines2, labels2, loc='upper left')
 
 def wm_experiment():
     filename = "logs_"
@@ -274,36 +275,38 @@ def stretch_experiment(stretch_coeff, q_min):
     times       = [x/1000 for x in data[1][0]]
     quality     = [x for x in data[2][0]]
     quality_avg = [x for x in data[3][0]]
-    fig, ax = plt.subplots(figsize=(10,8))
-    fig.subplots_adjust(right=0.75)
-    fig.suptitle(f'Stretch to time with Max deformation= {q_min}')
-    ax.set_xscale('log')
-    ax.set_ylabel('Time (s)')
-    ax.set_xlabel('Timesteps')
 
-    ax.set_ylim([0, 120])
+    fig, ax = plt.subplots(2,1, figsize=(10,8), gridspec_kw={'height_ratios': [3, 1]})
+    fig.suptitle(f'Stretch to time with remeshing threshold = {q_min}')
+    ax[0].set_xscale('log')
+    ax[1].set_xscale('log')
+    ax[0].set_ylabel('Time (s)')
+    ax[1].set_xlabel('Timesteps')
+
+    ax[0].set_ylim([0, 120])
 
     quality_color = 'red'
     average_color='green'
     base_color = 'blue'
 
-    twin1 = ax.twinx()
-    twin1.tick_params(axis='y', colors=quality_color)
+    twin1 = ax[0].twinx()
     twin1.set_ylim([30, 58])
-    twin2 = ax.twinx()
-    twin2.set_ylim([12.5, 14])
-    twin2.tick_params(axis='y', colors=average_color)
-    twin2.set_ylabel('Deformation energies')
+    # twin2 = ax.twinx()
+    ax[1].set_ylim([12.5, 14])
+    ax[1].set_ylabel('Deformation energies')
+    ax[1].yaxis.tick_right()
+    ax[1].yaxis.set_label_position("right")
 
-    ax.plot(angles,times, color=base_color, label='Time')
+    ax[0].plot(angles,times, color=base_color, label='Time')
     twin1.plot(angles, quality, color=quality_color, label="Worst element")
     twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Maximal energy')
-    twin2.plot(angles, quality_avg, color=average_color, label="Mesh average energy")
-    twin2.spines.right.set_position(("axes", 1.2))
+    ax[1].plot(angles, quality_avg, color=average_color, label="Mesh average energy")
 
-    lines,labels = twin1.get_legend_handles_labels()
-    lines2,labels2 = twin2.get_legend_handles_labels()
-    ax.legend(lines+lines2, labels+labels2, loc='upper left')
+    lines,labels = ax[0].get_legend_handles_labels()
+    lines2,labels2 = twin1.get_legend_handles_labels()
+    ax[0].legend(lines+lines2, labels+labels2)
+    ax[1].legend()
+    fig.savefig(f"3D/stretch_experiment/stretch{q_min}")
     
 
 def length_experiment(q_min:float = 50):
@@ -314,33 +317,36 @@ def length_experiment(q_min:float = 50):
     quality     = [x for x in data[2][0]]
     quality_avg = [x for x in data[3][0]]
 
-    fig, ax = plt.subplots(figsize=(10,8))
-    fig.subplots_adjust(right=0.75)
-    fig.suptitle(f'Time to length with max deformation = {q_min}')
+    fig, ax = plt.subplots(2,1, figsize=(10,8), gridspec_kw={'height_ratios': [3, 1]})
+    fig.suptitle(f'Time to length with remeshing threshold = {q_min}')
 
-    ax.set_xticks(length)
-    ax.set_ylabel('Time (s)')
-    ax.set_xlabel('Stretching factor')
+    ax[0].set_xticks(length)
+    ax[1].set_xticks(length)
+    ax[0].set_ylabel('Time (s)')
+    ax[1].set_xlabel('Stretching factor')
 
     quality_color = 'red'
     average_color='green'
     base_color = 'blue'
 
-    twin1 = ax.twinx()
+    twin1 = ax[0].twinx()
     twin1.tick_params(axis='y', colors=quality_color)
-    twin2 = ax.twinx()
-    twin2.tick_params(axis='y', colors=average_color)
-    twin2.set_ylabel('Deformation energies')
+    # twin2 = ax.twinx()
+    ax[1].tick_params(axis='y', colors=average_color)
+    ax[1].set_ylabel('Deformation energies')
+    ax[1].yaxis.tick_right()
+    ax[1].yaxis.set_label_position("right")
 
-    ax.plot(length,times, color=base_color)
-    twin1.plot(length, quality, color=quality_color, label="Worst element")
-    twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Maximal energy')
-    twin2.plot(length, quality_avg, color=average_color, label="Mesh average energy")
-    twin2.spines.right.set_position(("axes", 1.2))
-
-    lines,labels = twin1.get_legend_handles_labels()
-    lines2,labels2 = twin2.get_legend_handles_labels()
-    ax.legend(lines+lines2, labels+labels2, loc='upper left')
+    ax[0].plot(length,times, color=base_color)
+    twin1.plot(length, quality, color=quality_color, label="Final worst element")
+    twin1.axhline(y=float(q_min), color=quality_color, alpha=0.5, linestyle='dashed', label='Remeshing threshold')
+    ax[1].plot(length, quality_avg, color=average_color, label="Final mesh average energy")
+    
+    lines,labels = ax[0].get_legend_handles_labels()
+    lines2,labels2 = twin1.get_legend_handles_labels()
+    ax[0].legend(lines+lines2, labels+labels2, loc='upper left')
+    ax[1].legend()
+    fig.savefig(f"3D/length_experiment/length{q_min}")
 
     
 
@@ -353,7 +359,7 @@ def main():
     # timesteps_experiment(360,80)
 
     # Quality spin epxeriment
-    experiments = ["aquality_spin","quality_stretch","arevert_experiment"]
+    experiments = ["quality_spin","aquality_stretch","arevert_experiment"]
     # [quality_experiment(exp) for exp in experiments]
     
 
@@ -361,7 +367,7 @@ def main():
     # turn_experiment()
 
     # Length experiment
-    length_experiment(40)
+    # length_experiment(40)
 
     # Stretch timesteps experiment
     # stretch_experiment("1_7x",35)

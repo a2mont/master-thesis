@@ -8,7 +8,7 @@ import re
 def plot_logs(datas):
     rows = int(np.ceil(len(datas)/2))
     cols = 2
-    fig, ax = plt.subplots(rows, cols, figsize=(15,15), sharey='all')
+    fig, ax = plt.subplots(rows, cols, figsize=(15,15))
     fig.tight_layout(pad=3.5)
 
     for i, (title, model) in enumerate(datas.items()):
@@ -45,7 +45,7 @@ def plot_timesteps(datas):
     datas = {key: data[1] for key, data in datas.items() }
     rows = int(np.ceil(len(datas)/2))
     cols = 2
-    fig, ax = plt.subplots(rows, cols, figsize=(15,15), sharey='all')
+    fig, ax = plt.subplots(rows, cols, figsize=(15,15))
     fig.tight_layout(pad=3.5)
     for i, (title, model) in enumerate(datas.items()):
         if len(model) == 0:
@@ -69,7 +69,7 @@ def plot_timesteps(datas):
 
     plt.show()
 
-def find_files(regex, dimension='3D'):
+def find_files(regex, dimension='2D'):
     filenames = []
 
     for _, _, files in os.walk(f'./{dimension}/'):
